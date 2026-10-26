@@ -2,6 +2,7 @@
   "name": "l2gether-backend",
   "version": "1.0.0",
   "description": "L2gether backend server with Express, Socket.IO, PostgreSQL/SQLite adapter, sandboxed execution, and WebRTC signaling",
+  "author": "Saurav B <saurav04atg@gmail.com> (https://github.com/aurenox)",
   "main": "src/server.js",
   "type": "module",
   "scripts": {
@@ -29,6 +30,6 @@
     "supertest": "^7.0.0"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   }
 }

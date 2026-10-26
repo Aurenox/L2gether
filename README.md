@@ -3,10 +3,10 @@
 > **A modern, temporary collaborative workspace where people connect via a room link or QR code and work together without mandatory account registration.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-v20%2B-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-v22%2B%20LTS-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://react.dev/)
 [![Monaco Editor](https://img.shields.io/badge/Monaco%20Editor-VS%20Code%20Engine-purple.svg)](https://microsoft.github.io/monaco-editor/)
-[![Tests](https://img.shields.io/badge/Tests-19%20Passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-41%20Passing-brightgreen.svg)]()
 
 ---
 
@@ -120,57 +120,70 @@ The full relational schema with foreign keys, indexes, and triggers is located a
 
 ## 5. Automated Tests
 
-L2gether includes a comprehensive test suite covering backend logic, 7-day expiration reconciliation, guest sessions, sandboxed execution, real-time Socket.IO chat, collaborative code broadcasting, and WebRTC audio signaling:
+L2gether includes an automated test suite covering backend API endpoints, 7-day expiration reconciliation, guest sessions, sandboxed execution, real-time Socket.IO chat, collaborative code broadcasting, host lock modes, and WebRTC audio signaling:
 
 ```bash
 cd backend
 npm test
 ```
 
-Result: **19 tests passed, 0 failures**.
+Result: **41 tests passed, 0 failures**.
 
 ---
 
-## 6. Production Deployment Guide
+## 6. Cloud Deployment Guide (Render + Vercel)
 
-### Environment Variables
-Copy `.env.example` to `.env` and configure:
-```env
-PORT=5000
-NODE_ENV=production
-CLIENT_URL=https://your-l2gether-domain.com
-DATABASE_URL=postgresql://user:password@host:5432/l2gether
-SESSION_SECRET=your-secure-random-32-char-secret
-UPLOAD_DIR=./storage/uploads
-MAX_FILE_SIZE_MB=25
-EXECUTION_TIMEOUT_MS=10000
-ROOM_EXPIRY_DAYS=7
-CLEANUP_INTERVAL_MINUTES=30
-```
+L2gether is pre-configured for seamless zero-downtime deployment:
+- **Backend (API + WebSockets):** [Render](https://render.com) (or Railway / Fly.io)
+- **Frontend (Single Page App):** [Vercel](https://vercel.com) (or Netlify / Cloudflare Pages)
 
-### Production Build
-```bash
-# Build optimized frontend bundle
-npm run build:frontend
+### A. Deploy Backend to Render
 
-# Start production server
-npm start
-```
+1. Log in to your [Render Dashboard](https://dashboard.render.com/) and click **New +** -> **Web Service**.
+2. Connect your GitHub repository (`L2gether`).
+3. Fill in the service configuration:
+   - **Name:** `l2gether-backend` (or your choice)
+   - **Region:** Nearest to your users (e.g. Oregon, Frankfurt, Singapore)
+   - **Branch:** `main`
+   - **Root Directory:** `backend`
+   - **Runtime:** `Node`
+   - **Build Command:** `npm install`
+   - **Start Command:** `node src/server.js`
+4. In **Environment Variables**, add:
+   - `NODE_VERSION` = `22`
+   - `NODE_ENV` = `production`
+   - `SESSION_SECRET` = *(Generate a random string or click Generate)*
+   - `CLIENT_URL` = `https://your-frontend-domain.vercel.app` *(You can update this after Vercel deployment)*
+   - *(Optional)* `DATABASE_URL` = *(Render PostgreSQL connection string. If omitted, L2gether automatically uses native SQLite)*
+5. Click **Deploy Web Service**.
+6. Copy your public Render URL (e.g., `https://l2gether-backend.onrender.com`).
 
-### Health Check Endpoint
-- URL: `GET /health`
-- Response:
-```json
-{
-  "status": "healthy",
-  "app": "L2gether",
-  "version": "1.0.0",
-  "timestamp": "2026-10-24T17:38:13.251Z"
-}
-```
+### B. Deploy Frontend to Vercel
+
+1. Log in to your [Vercel Dashboard](https://vercel.com/dashboard) and click **Add New...** -> **Project**.
+2. Import your GitHub repository (`L2gether`).
+3. In **Project Configuration**:
+   - **Framework Preset:** `Vite`
+   - **Root Directory:** Click *Edit* and select `frontend`
+   - **Build Command:** `npm run build` (default)
+   - **Output Directory:** `dist` (default)
+4. In **Environment Variables**, add:
+   - **Key:** `VITE_API_URL`
+   - **Value:** `https://l2gether-backend.onrender.com` *(Paste your Render backend URL from Step A, with no trailing slash)*
+5. Click **Deploy**.
+6. Once deployed, copy your Vercel URL and update `CLIENT_URL` in your Render Web Service settings.
 
 ---
 
-## 7. License
+## 7. Creator & Developer
 
-MIT License. Designed and engineered for high-velocity developer collaboration.
+**Saurav B**
+- **GitHub:** [@aurenox](https://github.com/aurenox)
+- **Email:** [saurav04atg@gmail.com](mailto:saurav04atg@gmail.com)
+- **LinkedIn:** [Saurav B](https://www.linkedin.com/in/saurav-b-a864a7326/)
+
+---
+
+## 8. License
+
+MIT License © 2026 Saurav B. Designed and engineered for high-velocity developer collaboration.

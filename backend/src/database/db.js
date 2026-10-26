@@ -23,9 +23,11 @@ export async function initDatabase() {
   if (databaseUrl && databaseUrl.trim() !== '') {
     try {
       console.log('[DB] Attempting connection to PostgreSQL...');
+      const isLocal = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1');
       pgPool = new pg.Pool({
         connectionString: databaseUrl,
-        connectionTimeoutMillis: 5000
+        connectionTimeoutMillis: 5000,
+        ssl: isLocal ? false : { rejectUnauthorized: false }
       });
       // Test connection
       const client = await pgPool.connect();

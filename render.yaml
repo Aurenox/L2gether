@@ -8,6 +8,8 @@ services:
     buildCommand: npm install
     startCommand: node src/server.js
     envVars:
+      - key: NODE_VERSION
+        value: 22
       - key: NODE_ENV
         value: production
       - key: CLIENT_URL
