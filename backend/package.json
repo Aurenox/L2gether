@@ -1,0 +1,34 @@
+{
+  "name": "l2gether-backend",
+  "version": "1.0.0",
+  "description": "L2gether backend server with Express, Socket.IO, PostgreSQL/SQLite adapter, sandboxed execution, and WebRTC signaling",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "migrate": "node src/database/migrate.js",
+    "test": "node --test --test-concurrency=1 tests/**/*.test.js"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jszip": "^3.10.1",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.13.3",
+    "socket.io": "^4.8.1",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9",
+    "socket.io-client": "^4.8.4",
+    "supertest": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

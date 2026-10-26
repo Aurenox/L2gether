@@ -1,0 +1,25 @@
+services:
+  # L2gether Collaborative Real-Time Backend
+  - type: web
+    name: l2gether-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node src/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_URL
+        value: https://l2gether.vercel.app # Replace with your actual Vercel domain
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ROOM_EXPIRY_DAYS
+        value: 7
+      - key: CLEANUP_INTERVAL_MINUTES
+        value: 30
+      # Optional: Add PostgreSQL Database URL if connecting to Render Postgres
+      # - key: DATABASE_URL
+      #   fromDatabase:
+      #     name: l2gether-db
+      #     property: connectionString

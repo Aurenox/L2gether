@@ -1,0 +1,28 @@
+{
+  "name": "l2gether-workspace",
+  "version": "1.0.0",
+  "description": "L2gether — One link. Everything together. Temporary collaborative workspace with real-time code editor, chat, files, execution, preview, and audio calls.",
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "concurrently -n \"backend,frontend\" -c \"blue,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:frontend": "cd frontend && npm run build",
+    "start": "cd backend && npm start",
+    "test": "cd backend && npm test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "keywords": [
+    "collaboration",
+    "code-editor",
+    "webrtc",
+    "socketio",
+    "monaco-editor",
+    "real-time",
+    "workspace"
+  ],
+  "author": "L2gether Team",
+  "license": "MIT"
+}

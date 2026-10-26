@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# Build outputs & caches
+dist/
+frontend/dist/
+build/
+.vite/
+frontend/.vite/
+
+# Database files & storage
+backend/storage/*.db
+backend/storage/*.db-journal
+backend/storage/*.db-wal
+backend/storage/*.db-shm
+backend/storage/temp/
+backend/storage/workspaces/
+backend/storage/uploads/
+storage/*.db
+*.db
+*.db-journal
+
+# Logs & temp
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# System & IDE artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
