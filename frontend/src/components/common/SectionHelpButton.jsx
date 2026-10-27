@@ -9,7 +9,50 @@ export default function SectionHelpButton({
   align = 'right'
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [coords, setCoords] = useState(null);
   const containerRef = useRef(null);
+
+  const updateCoords = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const popWidth = Math.min(320, window.innerWidth - 24);
+      let top = rect.bottom + 8;
+      if (top + 340 > window.innerHeight) {
+        top = Math.max(12, rect.top - 330);
+      }
+
+      let left = rect.right - popWidth;
+      if (align === 'left') {
+        left = rect.left;
+      }
+      if (left + popWidth > window.innerWidth - 12) {
+        left = window.innerWidth - popWidth - 12;
+      }
+      if (left < 12) {
+        left = 12;
+      }
+
+      setCoords({ top, left, width: popWidth });
+    }
+  };
+
+  const handleToggle = () => {
+    if (!isOpen) {
+      updateCoords();
+    }
+    setIsOpen(!isOpen);
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    updateCoords();
+    window.addEventListener('resize', updateCoords);
+    window.addEventListener('scroll', updateCoords, true);
+    return () => {
+      window.removeEventListener('resize', updateCoords);
+      window.removeEventListener('scroll', updateCoords, true);
+    };
+  }, [isOpen, align]);
 
   useEffect(() => {
     const handleOutsideClick = (e) => {
@@ -35,7 +78,7 @@ export default function SectionHelpButton({
       <button
         type="button"
         className={`btn btn-subtle btn-icon sm ${isOpen ? 'active' : ''}`}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         title={`Help & Tips: ${title} (?)`}
         aria-label={`Help & Tips for ${title}`}
         style={{
@@ -52,17 +95,20 @@ export default function SectionHelpButton({
         <div
           className="section-help-popover"
           style={{
-            position: 'absolute',
-            top: 'calc(100% + 8px)',
-            [align === 'right' ? 'right' : 'left']: 0,
-            width: '320px',
-            maxWidth: '90vw',
+            position: 'fixed',
+            top: coords ? `${coords.top}px` : '60px',
+            left: coords ? `${coords.left}px` : 'auto',
+            right: !coords ? '16px' : 'auto',
+            width: coords ? `${coords.width}px` : '320px',
+            maxWidth: 'calc(100vw - 24px)',
+            maxHeight: 'calc(100vh - 80px)',
+            overflowY: 'auto',
             backgroundColor: '#111520',
             border: '1px solid #232A3B',
             borderRadius: 'var(--radius-md, 8px)',
-            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.45)',
+            boxShadow: '0 16px 48px rgba(0, 0, 0, 0.75)',
             padding: '0.85rem',
-            zIndex: 1200,
+            zIndex: 100000,
             animation: 'fadeIn 0.15s ease-out',
             color: 'var(--text-main, #FFFFFF)'
           }}

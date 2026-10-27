@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Users, Crown, UserMinus, Check, AlertCircle, Shield } from 'lucide-react';
 import api from '../../services/api';
+import { formatLocalTime } from '../../utils/date';
 
 export default function ParticipantListModal({
   roomId,
@@ -130,7 +131,7 @@ export default function ParticipantListModal({
                           {p.display_name} {isSelf && <span style={{ color: 'var(--text-muted)' }}>(You)</span>}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          Joined {new Date(p.joined_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          Joined {formatLocalTime(p.joined_at)}
                         </div>
                       </div>
                     </div>
@@ -183,7 +184,7 @@ export default function ParticipantListModal({
                       <div>
                         <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{r.display_name}</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          Requested at {new Date(r.created_at).toLocaleTimeString()}
+                          Requested at {formatLocalTime(r.created_at)}
                         </div>
                       </div>
 

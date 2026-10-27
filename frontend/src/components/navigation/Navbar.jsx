@@ -140,7 +140,7 @@ export default function Navbar() {
                 color: showCreatorPopup ? 'var(--accent-primary)' : 'var(--text-secondary)'
               }}
             >
-              <UserCheck size={16} />
+              <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#A855F7', textShadow: '0 0 10px rgba(168, 85, 247, 0.65)', lineHeight: 1 }}>©</span>
             </button>
 
             {showCreatorPopup && (
@@ -279,7 +279,7 @@ export default function Navbar() {
             title="Platform Creator & Developer (Saurav B)"
             aria-label="Platform Creator & Contact"
           >
-            <UserCheck size={19} />
+            <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#A855F7', textShadow: '0 0 10px rgba(168, 85, 247, 0.65)', lineHeight: 1 }}>©</span>
           </button>
           <button
             className="btn btn-subtle btn-icon"

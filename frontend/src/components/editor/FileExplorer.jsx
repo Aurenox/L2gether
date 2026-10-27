@@ -571,6 +571,38 @@ export default function FileExplorer({
               </button>
             </>
           ) : null}
+          {/* Quick Mobile Copy & Cut Buttons */}
+          <button
+            className="btn btn-subtle btn-icon sm show-on-mobile"
+            onClick={() => {
+              const targets = selectedPaths.size > 0
+                ? Array.from(selectedPaths)
+                : (activeFilePath ? [activeFilePath] : []);
+              if (targets.length > 0) {
+                setClipboard({ action: 'copy', paths: targets });
+              }
+            }}
+            title="Copy Selected File (Mobile)"
+          >
+            <Copy size={13} />
+          </button>
+          {canEdit && (
+            <button
+              className="btn btn-subtle btn-icon sm show-on-mobile"
+              onClick={() => {
+                const targets = selectedPaths.size > 0
+                  ? Array.from(selectedPaths)
+                  : (activeFilePath ? [activeFilePath] : []);
+                if (targets.length > 0) {
+                  setClipboard({ action: 'cut', paths: targets });
+                }
+              }}
+              title="Cut Selected File (Mobile)"
+            >
+              <Scissors size={13} />
+            </button>
+          )}
+
           <button
             className="btn btn-subtle btn-icon sm"
             onClick={onExportZip}
@@ -888,6 +920,30 @@ export default function FileExplorer({
                           style={{ color: isFileLocked ? 'var(--state-warning, #f59e0b)' : 'var(--text-muted)' }}
                         >
                           <Lock size={12} />
+                        </button>
+                      )}
+
+                      {/* Copy & Cut Actions */}
+                      <button
+                        className="btn-icon sm btn-subtle"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setClipboard({ action: 'copy', paths: [node.path] });
+                        }}
+                        title={`Copy '${node.name}'`}
+                      >
+                        <Copy size={12} />
+                      </button>
+                      {canEdit && (
+                        <button
+                          className="btn-icon sm btn-subtle"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setClipboard({ action: 'cut', paths: [node.path] });
+                          }}
+                          title={`Cut '${node.name}'`}
+                        >
+                          <Scissors size={12} />
                         </button>
                       )}
 

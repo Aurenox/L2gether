@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import SectionHelpButton from '../common/SectionHelpButton.jsx';
+import { formatLocalTime } from '../../utils/date';
 
 export default function ChatPanel({
   roomId,
@@ -265,14 +266,19 @@ export default function ChatPanel({
             isAll: false
           }));
 
-        if (query.includes(' ') && !roster.some((p) => p.display_name.toLowerCase().startsWith(query.trim()))) {
+        // Include @all suggestion for broadcasting to everyone
+        const allOption = { id: '__all__', display_name: 'all', isAll: true };
+
+        const allChoices = [allOption, ...roster];
+
+        if (query.includes(' ') && !allChoices.some((p) => p.display_name.toLowerCase().startsWith(query.trim()))) {
           setMentionSuggestions([]);
           return;
         }
 
         const filtered = query.trim()
-          ? roster.filter((p) => p.display_name.toLowerCase().includes(query.trim()))
-          : roster;
+          ? allChoices.filter((p) => p.display_name.toLowerCase().includes(query.trim()))
+          : allChoices;
 
         setMentionSuggestions(filtered);
         return;
@@ -587,10 +593,7 @@ export default function ChatPanel({
 
             const isMentioned = !isOwn && (isAllMention || isDirectMention);
 
-            const timeStr = new Date(m.created_at || Date.now()).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit'
-            });
+            const timeStr = formatLocalTime(m.created_at);
 
             return (
               <div

@@ -127,6 +127,12 @@ export default function RoomWorkspacePage() {
       if (isSender) return;
 
       const contentLower = (msg.content || '').toLowerCase();
+      const isAllMention =
+        contentLower.includes('@all') ||
+        contentLower.includes('@everyone') ||
+        contentLower.includes('@every one') ||
+        contentLower.includes('@everybody');
+
       const myCleanName = myName.replace(/\s+/g, '');
       const isDirectMention = Boolean(
         myName && (
@@ -135,25 +141,28 @@ export default function RoomWorkspacePage() {
         )
       );
 
-      const isMentioned = isDirectMention;
+      const isMentioned = isAllMention || isDirectMention;
 
-      // Only increment unread count if user is currently on another workspace tab
+      // Always show red mention popup when mentioned or @all is called
+      if (isMentioned) {
+        setChatMentionToast({
+          id: msg.id,
+          sender: msg.sender_name || 'Teammate',
+          content: msg.content,
+          isAll: isAllMention
+        });
+
+        if (chatToastTimeoutRef.current) clearTimeout(chatToastTimeoutRef.current);
+        chatToastTimeoutRef.current = setTimeout(() => {
+          setChatMentionToast(null);
+        }, 7000);
+      }
+
+      // If user is currently on another workspace tab, increment unread count & toggle blinking badge
       if (activeTabRef.current !== 'chat') {
         setUnreadChatCount((prev) => prev + 1);
-
         if (isMentioned) {
           setHasChatMention(true);
-          setChatMentionToast({
-            id: msg.id,
-            sender: msg.sender_name || 'Teammate',
-            content: msg.content,
-            isAll: isAllMention
-          });
-
-          if (chatToastTimeoutRef.current) clearTimeout(chatToastTimeoutRef.current);
-          chatToastTimeoutRef.current = setTimeout(() => {
-            setChatMentionToast(null);
-          }, 7000);
         }
       }
     };
@@ -1169,7 +1178,12 @@ export default function RoomWorkspacePage() {
           <div className="mention-toast-icon">@</div>
           <div className="mention-toast-content">
             <div className="mention-toast-header">
-              <strong>{chatMentionToast.sender}</strong> mentioned you in chat
+              <strong>{chatMentionToast.sender}</strong>{' '}
+              {chatMentionToast.isAll ? (
+                <span>broadcasted to <strong style={{ color: '#F87171' }}>@all</strong></span>
+              ) : (
+                <span>mentioned you in chat</span>
+              )}
             </div>
             <div className="mention-toast-text">{chatMentionToast.content}</div>
           </div>
@@ -1222,15 +1236,16 @@ export default function RoomWorkspacePage() {
             style={{ position: 'relative' }}
           >
             <MessageSquare size={18} />
-            {hasChatMention ? (
-              <span className="activity-mention-badge" title="You were mentioned in chat!">
+            {hasChatMention && (
+              <span className="activity-mention-badge" title="You were mentioned in chat! (or @all broadcast)">
                 @
               </span>
-            ) : unreadChatCount > 0 ? (
+            )}
+            {unreadChatCount > 0 && (
               <span className="activity-unread-badge">
                 {unreadChatCount > 9 ? '9+' : unreadChatCount}
               </span>
-            ) : null}
+            )}
           </button>
           <button
             className={`activity-tab-btn ${activeTab === 'files' ? 'active' : ''}`}
@@ -1278,7 +1293,7 @@ export default function RoomWorkspacePage() {
               title="Platform Creator & Contact (Saurav B) - Click to keep open"
               aria-label="Platform Creator & Contact"
             >
-              <UserCheck size={18} />
+              <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#A855F7', textShadow: '0 0 10px rgba(168, 85, 247, 0.65)', lineHeight: 1 }}>©</span>
             </button>
 
             {showCreatorPopup && (
@@ -1543,7 +1558,8 @@ export default function RoomWorkspacePage() {
                             }}
                           >
                             {(lockedFiles || []).includes(activeFilePath) ? <Lock size={12} /> : <Unlock size={12} />}
-                            <span>{(lockedFiles || []).includes(activeFilePath) ? `Locked (${activeFilePath?.split('/').pop() || 'File'})` : 'Lock File'}</span>
+                            <span className="hide-on-mobile">{(lockedFiles || []).includes(activeFilePath) ? `Locked (${activeFilePath?.split('/').pop() || 'File'})` : 'Lock File'}</span>
+                            <span className="show-on-mobile-inline">{(lockedFiles || []).includes(activeFilePath) ? 'Locked' : 'Lock'}</span>
                           </button>
 
                           <button
@@ -1567,7 +1583,8 @@ export default function RoomWorkspacePage() {
                           title="Host has locked editing for this file"
                         >
                           <Lock size={12} />
-                          <span>Read-Only (Locked by Host)</span>
+                          <span className="hide-on-mobile">Read-Only (Locked by Host)</span>
+                          <span className="show-on-mobile-inline">Locked</span>
                         </span>
                       ) : (
                         <span
@@ -1587,6 +1604,7 @@ export default function RoomWorkspacePage() {
                   >
                     <Sparkles size={13} color="var(--accent-primary)" />
                     <span className="hide-on-mobile">Templates (Shift+!)</span>
+                    <span className="show-on-mobile-inline">Templates</span>
                   </button>
 
                   <button
@@ -1596,6 +1614,7 @@ export default function RoomWorkspacePage() {
                   >
                     <Columns size={13} />
                     <span className="hide-on-mobile">{showSplitPreview ? 'Close Split' : 'Live Preview Split'}</span>
+                    <span className="show-on-mobile-inline">Split</span>
                   </button>
 
                   <button
@@ -1605,6 +1624,7 @@ export default function RoomWorkspacePage() {
                   >
                     <Globe size={13} />
                     <span className="hide-on-mobile">Full Preview</span>
+                    <span className="show-on-mobile-inline">Preview</span>
                   </button>
                 </div>
 
@@ -1632,7 +1652,7 @@ export default function RoomWorkspacePage() {
                     <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary)' }}>Unsaved</span>
                   ) : (
                     <span style={{ fontSize: '0.75rem', color: 'var(--state-success)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      <Check size={12} /> Saved
+                      <Check size={12} /> <span className="hide-on-mobile">Saved</span>
                     </span>
                   )}
                   <button

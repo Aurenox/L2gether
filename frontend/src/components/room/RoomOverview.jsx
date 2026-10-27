@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { getRoomJoinUrl } from '../../utils/url';
 import SectionHelpButton from '../common/SectionHelpButton';
+import { formatLocalDate, formatLocalDateTime } from '../../utils/date';
 
 export default function RoomOverview({
   room,
@@ -40,18 +41,8 @@ export default function RoomOverview({
     }
   };
 
-  const createdDate = new Date(room?.createdAt).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  });
-
-  const expiresDate = new Date(room?.expiresAt).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const createdDate = formatLocalDate(room?.createdAt);
+  const expiresDate = formatLocalDateTime(room?.expiresAt);
 
   return (
     <div
@@ -175,7 +166,7 @@ export default function RoomOverview({
           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Click a tile to launch</span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.65rem' }}>
+        <div className="room-overview-tiles-grid">
           <div
             className="feature-card"
             style={{ cursor: 'pointer', padding: '0.75rem 0.85rem', margin: 0, minHeight: 'auto' }}
@@ -235,7 +226,7 @@ export default function RoomOverview({
       </div>
 
       {/* 3. Bottom Row: Room Details & WebRTC Audio Echo Advice */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '0.65rem', flexShrink: 0 }}>
+      <div className="room-overview-bottom-grid">
         {/* Room Metadata Card */}
         <div className="card" style={{ padding: '0.75rem 1rem', margin: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>

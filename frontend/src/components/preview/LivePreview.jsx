@@ -371,6 +371,15 @@ export default function LivePreview({ files = [], activeFilePath = '', onSelectF
         :where(*, *::before, *::after) {
           box-sizing: inherit;
         }
+        html, body {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        html::-webkit-scrollbar, body::-webkit-scrollbar {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
+        }
         :where(body) {
           margin: 0;
           padding: 1.25rem;
@@ -651,13 +660,14 @@ export default function LivePreview({ files = [], activeFilePath = '', onSelectF
             </button>
           </div>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0 }}>
             <input
               type="checkbox"
               checked={autoRefresh}
               onChange={(e) => setAutoRefresh(e.target.checked)}
             />
-            Auto-refresh
+            <span className="hide-on-mobile">Auto-refresh</span>
+            <span className="show-on-mobile-inline">Auto</span>
           </label>
 
           <span
