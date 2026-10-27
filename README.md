@@ -46,59 +46,46 @@ Whether you're running a quick pair-programming interview, debugging with a coll
 
 ## 📸 Screenshots & Demo
 
-> [!TIP]
-> **Image Drop-in Area**: To display your application screenshots, place your images in an `assets/screenshots/` folder (or link to hosted URLs) and replace the placeholder markdown links below.
-
 <table align="center" width="100%">
   <tr>
     <td width="50%" align="center">
-      <h4>1. Multi-File Monaco Workspace</h4>
-      <!-- ======================================================== -->
-      <!-- IMAGE PLACEHOLDER 1: Multi-File Workspace & Monaco Editor -->
-      <!-- Replace the link below with your image path (e.g. assets/screenshots/01-workspace.png) -->
-      <a href="#"><img src="https://placehold.co/800x450/1e1e2e/cdd6f4?text=1.+Monaco+Workspace+%2B+File+Explorer" alt="Multi-File Monaco Workspace" width="100%"/></a>
-      <!-- ======================================================== -->
-      <p><em>Full-featured VS Code engine with multi-file project tree, syntax highlighting, and tabs.</em></p>
+      <h4>1. Host Portal & Room Security Setup</h4>
+      <a href="assets/screenshots/1-host-room.png" target="_blank">
+        <img src="assets/screenshots/1-host-room.png" alt="Host Portal and Room Security" width="100%"/>
+      </a>
+      <p><em>Instant room creation with salted scrypt password hashing, private room approval mode, capacity limits, and starter templates.</em></p>
     </td>
     <td width="50%" align="center">
-      <h4>2. Live Sandboxed Web Preview</h4>
-      <!-- ======================================================== -->
-      <!-- IMAGE PLACEHOLDER 2: Live Responsive Web Preview -->
-      <!-- Replace the link below with your image path (e.g. assets/screenshots/02-preview.png) -->
-      <a href="#"><img src="https://placehold.co/800x450/1e1e2e/cdd6f4?text=2.+Live+Sandboxed+Web+Preview" alt="Live Responsive Web Preview" width="100%"/></a>
-      <!-- ======================================================== -->
-      <p><em>Real-time HTML/CSS/JS rendering with viewport switcher (Desktop, Tablet, Mobile) and console.</em></p>
+      <h4>2. Monaco Workspace & Interactive Split Preview</h4>
+      <a href="assets/screenshots/2-code-and-preview.png" target="_blank">
+        <img src="assets/screenshots/2-code-and-preview.png" alt="Monaco Workspace and Split Preview" width="100%"/>
+      </a>
+      <p><em>Full-featured VS Code editing engine, multi-file project explorer, Emmet expansions, and live side-by-side 3D WebGL / HTML rendering.</em></p>
     </td>
   </tr>
   <tr>
     <td width="50%" align="center">
-      <h4>3. Real-Time Chat & Code Snippets</h4>
-      <!-- ======================================================== -->
-      <!-- IMAGE PLACEHOLDER 3: Real-Time Team Chat -->
-      <!-- Replace the link below with your image path (e.g. assets/screenshots/03-chat.png) -->
-      <a href="#"><img src="https://placehold.co/800x450/1e1e2e/cdd6f4?text=3.+Real-Time+Chat+%2B+Code+Sharing" alt="Real-Time Team Chat" width="100%"/></a>
-      <!-- ======================================================== -->
-      <p><em>Socket.IO room chat with formatted code blocks, copy actions, and @mention tags.</em></p>
+      <h4>3. Full-Screen Responsive Web Preview</h4>
+      <a href="assets/screenshots/3-live-preview.png" target="_blank">
+        <img src="assets/screenshots/3-live-preview.png" alt="Full-Screen Responsive Web Preview" width="100%"/>
+      </a>
+      <p><em>Sandboxed canvas rendering with responsive device toggles (Desktop, Tablet, Mobile), auto-refresh, and integrated Web Console logger.</em></p>
     </td>
     <td width="50%" align="center">
-      <h4>4. Host Governance & Join Approvals</h4>
-      <!-- ======================================================== -->
-      <!-- IMAGE PLACEHOLDER 4: Host Security & Approval Queue -->
-      <!-- Replace the link below with your image path (e.g. assets/screenshots/04-security.png) -->
-      <a href="#"><img src="https://placehold.co/800x450/1e1e2e/cdd6f4?text=4.+Host+Security+%2B+Join+Requests" alt="Host Security & Join Queue" width="100%"/></a>
-      <!-- ======================================================== -->
-      <p><em>Private room gatekeeping, salted scrypt password hashing, and emergency recovery keys.</em></p>
+      <h4>4. Real-Time Team Chat & Whiteboard Sharing</h4>
+      <a href="assets/screenshots/4-chat.png" target="_blank">
+        <img src="assets/screenshots/4-chat.png" alt="Real-Time Team Chat and Whiteboard Sharing" width="100%"/>
+      </a>
+      <p><em>Low-latency Socket.IO room messaging with formatted syntax-highlighted code blocks, one-click copy, and inline shared whiteboard snapshots.</em></p>
     </td>
   </tr>
   <tr>
     <td colspan="2" align="center">
-      <h4>5. WebRTC Mesh Voice Calls</h4>
-      <!-- ======================================================== -->
-      <!-- IMAGE PLACEHOLDER 5: WebRTC Voice Calls & Audio Mesh -->
-      <!-- Replace the link below with your image path (e.g. assets/screenshots/05-audio-call.png) -->
-      <a href="#"><img src="https://placehold.co/1200x400/1e1e2e/cdd6f4?text=5.+WebRTC+Peer-to-Peer+Voice+Mesh" alt="WebRTC Voice Calling Mesh" width="100%"/></a>
-      <!-- ======================================================== -->
-      <p><em>Zero-plugin peer-to-peer audio calls with live active speaker indicators and mute toggles.</em></p>
+      <h4>5. Collaborative Whiteboard & WebRTC Voice Calling</h4>
+      <a href="assets/screenshots/5-calling-and-whiteboard.png" target="_blank">
+        <img src="assets/screenshots/5-calling-and-whiteboard.png" alt="Collaborative Whiteboard and WebRTC Voice Mesh" width="100%"/>
+      </a>
+      <p><em>Dockable interactive whiteboard with drawing & shape tools, plus peer-to-peer WebRTC voice mesh with live speaking indicator.</em></p>
     </td>
   </tr>
 </table>
@@ -148,7 +135,12 @@ Whether you're running a quick pair-programming interview, debugging with a coll
 - **Live Speaking Ring**: Visual audio waves and dynamic ring indicators to highlight who is currently speaking.
 - **No Third-Party Voice Apps**: Discuss code changes without needing Discord, Google Meet, or Zoom.
 
-### 📱 6. QR Code Pairing & Theme Engine
+### 🎨 6. Collaborative Whiteboard & System Diagramming
+- **Dockable & Floating Canvas**: Flexible placement (Stick Left, Stick Right, Float, Corner, Fit View) for drafting system architecture, data models, or algorithm dry runs.
+- **Rich Vector Drawing Toolkit**: Freehand pen, lines, rectangles, ellipses, arrows, text annotations, customizable stroke thickness, and curated color swatches.
+- **Instant Chat Broadcast**: Share high-resolution whiteboard snapshots directly into the live room chat with one click for discussion and download.
+
+### 📱 7. QR Code Pairing & Theme Engine
 - **Instant Mobile Pairing**: Generate an on-the-fly QR code for mobile browsers to preview web pages or join the room chat.
 - **Theme Synchronizer**: Curated Dark, Light, and System themes with zero flash of unstyled content and synchronized Monaco editor themes.
 
