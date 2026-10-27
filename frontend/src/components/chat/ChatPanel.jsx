@@ -13,9 +13,11 @@ import {
   Reply,
   CornerUpLeft,
   Palette,
-  Maximize2
+  Maximize2,
+  AtSign
 } from 'lucide-react';
 import api from '../../services/api';
+import SectionHelpButton from '../common/SectionHelpButton.jsx';
 
 export default function ChatPanel({
   roomId,
@@ -245,12 +247,8 @@ export default function ChatPanel({
         const mySessionId = userSession?.sessionId || userSession?.id;
         const myName = (userSession?.displayName || '').trim().toLowerCase();
 
-        const allOptions = [
-          { id: '__all__', display_name: 'all', isAll: true },
-          { id: '__everyone__', display_name: 'everyone', isAll: true }
-        ];
-
         // Exclude current user so sender NEVER sees themselves in mention suggestions
+        // Strictly filter real active participants (no @all or @everyone)
         const roster = (localParticipants || [])
           .filter((p) => {
             if (!p || !p.display_name) return false;
@@ -267,10 +265,14 @@ export default function ChatPanel({
             isAll: false
           }));
 
-        const combined = [...allOptions, ...roster];
+        if (query.includes(' ') && !roster.some((p) => p.display_name.toLowerCase().startsWith(query.trim()))) {
+          setMentionSuggestions([]);
+          return;
+        }
+
         const filtered = query.trim()
-          ? combined.filter((p) => p.display_name.toLowerCase().includes(query.trim()))
-          : combined;
+          ? roster.filter((p) => p.display_name.toLowerCase().includes(query.trim()))
+          : roster;
 
         setMentionSuggestions(filtered);
         return;
@@ -511,6 +513,18 @@ export default function ChatPanel({
               }}
             />
           </button>
+
+          <SectionHelpButton
+            title="Real-Time Chat Help"
+            description="Collaborative team messaging with teammate mentions, formatted code snippets, message replies, and whiteboard snapshots."
+            tips={[
+              "Teammate Mentions: Type @ to suggest and mention active teammates directly.",
+              "Code Snippets: Click the Snippet button to share formatted, syntax-highlighted code.",
+              "Quick Replies: Hover over any message and click 'Reply' to reference that message directly.",
+              "Smooth Navigation: Clicking a quoted reply scrolls straight to the original message."
+            ]}
+            align="right"
+          />
         </div>
       </div>
 

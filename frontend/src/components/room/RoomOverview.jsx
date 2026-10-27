@@ -16,6 +16,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { getRoomJoinUrl } from '../../utils/url';
+import SectionHelpButton from '../common/SectionHelpButton';
 
 export default function RoomOverview({
   room,
@@ -117,6 +118,18 @@ export default function RoomOverview({
                 <span>First Time? Guide</span>
               </button>
             )}
+
+            <SectionHelpButton
+              title="Workspace Hub Help"
+              description="Welcome to your collaborative workspace dashboard. Share invite links, manage room settings, and launch tools."
+              tips={[
+                "Invite Teammates: Copy the link or show the QR code for instant join without login.",
+                "Ephemeral Storage: All room files and state are retained in-memory until the expiration countdown ends.",
+                "Voice Call: Join the WebRTC audio room directly from the top navigation bar.",
+                "Quick Navigation: Jump straight to Code Workspace, Live Preview, Chat, Files, or Package Hub."
+              ]}
+              align="right"
+            />
           </div>
         </div>
 

@@ -1,5 +1,14 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import Editor from '@monaco-editor/react';
+import {
+  CheckSquare,
+  Copy,
+  Scissors,
+  Clipboard,
+  RotateCcw,
+  RotateCw,
+  Check
+} from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { detectLanguageFromPath } from '../../utils/templates';
 import { expandEmmetAbbreviation, LANGUAGE_SNIPPETS } from '../../utils/snippets';
@@ -21,6 +30,16 @@ export default function MonacoEditorWrapper({
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
   const isRemoteChangeRef = useRef(false);
+  const [feedback, setFeedback] = useState('');
+  const feedbackTimerRef = useRef(null);
+
+  const showFeedback = (msg) => {
+    setFeedback(msg);
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    feedbackTimerRef.current = setTimeout(() => {
+      setFeedback('');
+    }, 1800);
+  };
 
   // Map our language names to Monaco language identifiers
   const getMonacoLanguage = (path) => {
@@ -167,35 +186,244 @@ export default function MonacoEditorWrapper({
     }
   };
 
+  // Mobile / Quick Selection & Clipboard Actions
+  const handleSelectAll = () => {
+    if (!editorRef.current) return;
+    const editor = editorRef.current;
+    const model = editor.getModel();
+    if (model) {
+      editor.setSelection(model.getFullModelRange());
+      editor.focus();
+      showFeedback('All code selected');
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!editorRef.current) return;
+    const editor = editorRef.current;
+    const selection = editor.getSelection();
+    const model = editor.getModel();
+    let text = '';
+    if (selection && !selection.isEmpty() && model) {
+      text = model.getValueInRange(selection);
+    } else {
+      text = editor.getValue();
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        showFeedback('Copied to clipboard!');
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showFeedback('Copied to clipboard!');
+      }
+    } catch (e) {
+      showFeedback('Copy failed');
+    }
+  };
+
+  const handleCut = async () => {
+    if (!editorRef.current || readOnly) return;
+    const editor = editorRef.current;
+    const selection = editor.getSelection();
+    const model = editor.getModel();
+    if (!model) return;
+    let text = '';
+    if (selection && !selection.isEmpty()) {
+      text = model.getValueInRange(selection);
+      try {
+        await navigator.clipboard.writeText(text);
+        editor.executeEdits('mobile-cut', [{ range: selection, text: '' }]);
+        showFeedback('Cut to clipboard!');
+      } catch (e) {
+        showFeedback('Cut failed');
+      }
+    } else {
+      text = editor.getValue();
+      try {
+        await navigator.clipboard.writeText(text);
+        editor.setValue('');
+        showFeedback('Cut all to clipboard!');
+      } catch (e) {
+        showFeedback('Cut failed');
+      }
+    }
+  };
+
+  const handlePaste = async () => {
+    if (!editorRef.current || readOnly) return;
+    const editor = editorRef.current;
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          const selection = editor.getSelection();
+          if (selection) {
+            editor.executeEdits('mobile-paste', [{ range: selection, text }]);
+          } else {
+            editor.trigger('keyboard', 'paste', null);
+          }
+          showFeedback('Pasted from clipboard!');
+          return;
+        }
+      }
+    } catch (e) {
+      // Permission prompt blocked or unavailable
+    }
+    const userText = window.prompt('Paste text to insert:');
+    if (userText !== null && userText !== undefined) {
+      const selection = editor.getSelection();
+      if (selection) {
+        editor.executeEdits('mobile-paste', [{ range: selection, text: userText }]);
+      } else if (monacoRef.current) {
+        const range = new monacoRef.current.Range(1, 1, 1, 1);
+        editor.executeEdits('mobile-paste', [{ range, text: userText }]);
+      }
+      showFeedback('Pasted text!');
+    }
+  };
+
+  const handleUndo = () => {
+    if (editorRef.current && !readOnly) {
+      editorRef.current.trigger('keyboard', 'undo', null);
+      showFeedback('Undo');
+    }
+  };
+
+  const handleRedo = () => {
+    if (editorRef.current && !readOnly) {
+      editorRef.current.trigger('keyboard', 'redo', null);
+      showFeedback('Redo');
+    }
+  };
+
   return (
     <div className="monaco-wrapper">
-      <Editor
-        path={filePath}
-        language={getMonacoLanguage(filePath)}
-        value={content}
-        theme={monacoTheme}
-        onChange={handleEditorChange}
-        onMount={handleEditorDidMount}
-        options={{
-          fontSize: 14,
-          fontFamily: "'JetBrains Mono', Consolas, monospace",
-          lineNumbers: 'on',
-          roundedSelection: false,
-          scrollBeyondLastLine: false,
-          readOnly: Boolean(readOnly),
-          automaticLayout: true,
-          minimap: { enabled: true },
-          tabSize: 2,
-          wordWrap: 'on',
-          bracketPairColorization: { enabled: true },
-          autoClosingBrackets: 'always',
-          autoClosingQuotes: 'always',
-          formatOnPaste: true,
-          formatOnType: true,
-          cursorBlinking: 'smooth'
-        }}
-        loading={<div style={{ padding: '2rem', color: 'var(--text-muted)' }}>Loading Monaco Editor...</div>}
-      />
+      {/* Mobile / Touch Quick Text Selection & Clipboard Actions */}
+      <div className="editor-mobile-actions-bar">
+        <div className="editor-mobile-actions-group">
+          <button
+            type="button"
+            className="editor-action-chip accent"
+            onClick={handleSelectAll}
+            title="Select all text in this file"
+          >
+            <CheckSquare size={13} />
+            <span>Select All</span>
+          </button>
+          <button
+            type="button"
+            className="editor-action-chip"
+            onClick={handleCopy}
+            title="Copy selected text or entire file"
+          >
+            <Copy size={13} />
+            <span>Copy</span>
+          </button>
+          <button
+            type="button"
+            className="editor-action-chip"
+            onClick={handleCut}
+            disabled={readOnly}
+            title={readOnly ? 'File is locked' : 'Cut selected text or entire file'}
+            style={{ opacity: readOnly ? 0.4 : 1 }}
+          >
+            <Scissors size={13} />
+            <span>Cut</span>
+          </button>
+          <button
+            type="button"
+            className="editor-action-chip"
+            onClick={handlePaste}
+            disabled={readOnly}
+            title={readOnly ? 'File is locked' : 'Paste clipboard text'}
+            style={{ opacity: readOnly ? 0.4 : 1 }}
+          >
+            <Clipboard size={13} />
+            <span>Paste</span>
+          </button>
+        </div>
+
+        {feedback && (
+          <div
+            style={{
+              fontSize: '0.72rem',
+              color: 'var(--state-success, #10B981)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '0 6px',
+              animation: 'fadeIn 0.15s ease'
+            }}
+          >
+            <Check size={12} />
+            <span>{feedback}</span>
+          </div>
+        )}
+
+        <div className="editor-mobile-actions-group">
+          <button
+            type="button"
+            className="editor-action-chip"
+            onClick={handleUndo}
+            disabled={readOnly}
+            title="Undo"
+            style={{ opacity: readOnly ? 0.4 : 1 }}
+          >
+            <RotateCcw size={12} />
+            <span className="hide-on-mobile">Undo</span>
+          </button>
+          <button
+            type="button"
+            className="editor-action-chip"
+            onClick={handleRedo}
+            disabled={readOnly}
+            title="Redo"
+            style={{ opacity: readOnly ? 0.4 : 1 }}
+          >
+            <RotateCw size={12} />
+            <span className="hide-on-mobile">Redo</span>
+          </button>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+        <Editor
+          path={filePath}
+          language={getMonacoLanguage(filePath)}
+          value={content}
+          theme={monacoTheme}
+          onChange={handleEditorChange}
+          onMount={handleEditorDidMount}
+          options={{
+            fontSize: 14,
+            fontFamily: "'JetBrains Mono', Consolas, monospace",
+            lineNumbers: 'on',
+            roundedSelection: false,
+            scrollBeyondLastLine: false,
+            readOnly: Boolean(readOnly),
+            automaticLayout: true,
+            minimap: { enabled: true },
+            tabSize: 2,
+            wordWrap: 'on',
+            bracketPairColorization: { enabled: true },
+            autoClosingBrackets: 'always',
+            autoClosingQuotes: 'always',
+            formatOnPaste: true,
+            formatOnType: true,
+            cursorBlinking: 'smooth'
+          }}
+          loading={<div style={{ padding: '2rem', color: 'var(--text-muted)' }}>Loading Monaco Editor...</div>}
+        />
+      </div>
     </div>
   );
 }

@@ -3,17 +3,41 @@ import { getSocket } from '../services/socket.js';
 
 const AudioCallContext = createContext();
 
-const RTC_CONFIG = {
-  iceServers: [
+const getRtcConfig = () => {
+  const iceServers = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun3.l.google.com:19302' },
     { urls: 'stun:stun4.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' }
-  ],
-  iceCandidatePoolSize: 10
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'stun:global.stun.twilio.com:3478' },
+    { urls: 'stun:stun.services.mozilla.com' },
+    { urls: 'stun:stun.sipgate.net:3478' },
+    { urls: 'stun:stun.counterpath.com:3478' }
+  ];
+
+  // Optional custom TURN relay configuration for strict enterprise or cellular networks
+  const turnUrl = import.meta.env?.VITE_TURN_SERVER_URL;
+  const turnUser = import.meta.env?.VITE_TURN_USERNAME;
+  const turnPass = import.meta.env?.VITE_TURN_CREDENTIAL;
+  if (turnUrl) {
+    iceServers.push({
+      urls: turnUrl,
+      username: turnUser,
+      credential: turnPass
+    });
+  }
+
+  return {
+    iceServers,
+    iceCandidatePoolSize: 10,
+    bundlePolicy: 'max-bundle',
+    rtcpMuxPolicy: 'require'
+  };
 };
+
+const RTC_CONFIG = getRtcConfig();
 
 export function AudioCallProvider({ children }) {
   const [inCall, setInCall] = useState(false);
@@ -260,12 +284,47 @@ export function AudioCallProvider({ children }) {
       }
     };
 
+    let disconnectTimer = null;
+
+    pc.onconnectionstatechange = () => {
+      console.log(`[WebRTC Audio] Peer connection state with ${remoteSocketId}:`, pc.connectionState);
+      if (pc.connectionState === 'failed') {
+        console.warn(`[WebRTC Audio] Peer connection failed with ${remoteSocketId}, restarting ICE...`);
+        if (isInitiator) {
+          pc.restartIce?.();
+          pc.createOffer({ iceRestart: true, offerToReceiveAudio: true })
+            .then((offer) => pc.setLocalDescription(offer))
+            .then(() => socket.emit('audio_offer', { targetSocketId: remoteSocketId, offer: pc.localDescription }))
+            .catch((e) => console.warn('[WebRTC Audio] ICE restart error:', e));
+        }
+      }
+    };
+
     pc.oniceconnectionstatechange = () => {
       console.log(`[WebRTC Audio] ICE state with ${remoteSocketId}:`, pc.iceConnectionState);
-      if (pc.iceConnectionState === 'failed') {
+      if (pc.iceConnectionState === 'disconnected') {
+        if (disconnectTimer) clearTimeout(disconnectTimer);
+        disconnectTimer = setTimeout(() => {
+          if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+            console.warn(`[WebRTC Audio] ICE disconnected for 4s with ${remoteSocketId}, restarting ICE...`);
+            if (isInitiator) {
+              pc.restartIce?.();
+              pc.createOffer({ iceRestart: true, offerToReceiveAudio: true })
+                .then((offer) => pc.setLocalDescription(offer))
+                .then(() => socket.emit('audio_offer', { targetSocketId: remoteSocketId, offer: pc.localDescription }))
+                .catch((e) => console.warn('[WebRTC Audio] ICE restart error:', e));
+            }
+          }
+        }, 4000);
+      } else if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+        if (disconnectTimer) {
+          clearTimeout(disconnectTimer);
+          disconnectTimer = null;
+        }
+      } else if (pc.iceConnectionState === 'failed') {
         console.warn(`[WebRTC Audio] ICE failed with ${remoteSocketId}, restarting ICE...`);
         if (isInitiator) {
-          pc.restartIce();
+          pc.restartIce?.();
           pc.createOffer({ iceRestart: true, offerToReceiveAudio: true })
             .then((offer) => pc.setLocalDescription(offer))
             .then(() => socket.emit('audio_offer', { targetSocketId: remoteSocketId, offer: pc.localDescription }))

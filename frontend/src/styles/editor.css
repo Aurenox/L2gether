@@ -336,6 +336,8 @@
   flex: 1;
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Remote Cursor Awareness */
@@ -402,20 +404,34 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: 0;
+  overflow: hidden;
+  background-color: #0E121A;
+  position: relative;
+}
+
+.preview-stage.device-view {
+  padding: 1.25rem;
   overflow: auto;
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(0, 0, 0, 0.35);
 }
 
 .preview-frame-wrapper {
   background-color: #FFFFFF;
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
   transition: width 0.3s ease;
   height: 100%;
+  width: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.preview-stage.device-view .preview-frame-wrapper {
+  border-radius: var(--radius-sm);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  height: calc(100% - 1rem);
+  max-height: 820px;
 }
 
 .preview-iframe {
@@ -423,7 +439,109 @@
   height: 100%;
   border: none;
   background-color: #FFFFFF;
+  display: block;
 }
+
+/* Side-by-Side Split Code & Live Preview */
+.code-split-view-container {
+  display: flex;
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.code-split-editor-pane {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border-color);
+  position: relative;
+}
+
+.code-split-preview-pane {
+  flex: 1;
+  min-width: 320px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #0E121A;
+  position: relative;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .code-split-view-container {
+    flex-direction: column;
+  }
+  .code-split-editor-pane {
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    height: 50%;
+  }
+  .code-split-preview-pane {
+    height: 50%;
+    min-width: 100%;
+  }
+}
+
+/* Mobile Quick Text Action Strip for Monaco Editor */
+.editor-mobile-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.3rem 0.6rem;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  gap: 0.4rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  z-index: 5;
+}
+
+.editor-mobile-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.editor-action-chip {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--radius-xs);
+  font-size: 0.73rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.editor-action-chip:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--border-color);
+}
+
+.editor-action-chip:active {
+  background-color: var(--bg-active);
+  transform: scale(0.97);
+}
+
+.editor-action-chip.accent {
+  background-color: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
 
 /* Problems Panel */
 .problems-table {

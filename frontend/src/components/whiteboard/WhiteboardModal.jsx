@@ -27,6 +27,7 @@ import {
   SidebarClose,
   Maximize
 } from 'lucide-react';
+import SectionHelpButton from '../common/SectionHelpButton';
 
 const PRESET_COLORS = [
   '#FFFFFF', // White
@@ -964,6 +965,18 @@ export default function WhiteboardModal({
           >
             {isFullScreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
           </button>
+
+          <SectionHelpButton
+            title="Interactive Whiteboard Help"
+            description="Real-time multi-user drawing canvas for architecture diagrams, wireframes, and sketch notes."
+            tips={[
+              "Flexible Layout: Stick to Left or Right, float as a draggable window, pin to corner, or go full screen.",
+              "Rich Drawing Tools: Pen, brush, highlighter, shapes (rectangle, circle, line, arrow), text, and eraser.",
+              "Share to Chat: 1-click snapshot sends your whiteboard diagram directly into the room chat.",
+              "Real-time Sync: All strokes and clear actions sync across participants with undo/redo history."
+            ]}
+            align="right"
+          />
 
           <button
             type="button"

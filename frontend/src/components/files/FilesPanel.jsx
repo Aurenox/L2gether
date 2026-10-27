@@ -9,6 +9,7 @@ import {
   HardDrive
 } from 'lucide-react';
 import api from '../../services/api';
+import SectionHelpButton from '../common/SectionHelpButton';
 
 export default function FilesPanel({ roomId, userSession, isOwner }) {
   const [files, setFiles] = useState([]);
@@ -82,7 +83,20 @@ export default function FilesPanel({ roomId, userSession, isOwner }) {
           <HardDrive size={18} color="var(--accent-primary)" />
           <h3 style={{ fontSize: '1.05rem', fontWeight: 700 }}>Shared Files Repository</h3>
         </div>
-        <span className="badge badge-secondary">{files.length} Files</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span className="badge badge-secondary">{files.length} Files</span>
+          <SectionHelpButton
+            title="Shared Files Help"
+            description="Ephemeral file sharing repository for documents, assets, datasets, and archives up to 25MB."
+            tips={[
+              "Drag & Drop: Drop files anywhere into the upload dropzone or click to browse.",
+              "Direct Downloads: Any teammate can download shared files with 1 click.",
+              "Clean Lifecycle: All shared files expire and are securely deleted when the room ends.",
+              "Project Code: For source code files and folders, use the Code Workspace Files tree."
+            ]}
+            align="right"
+          />
+        </div>
       </div>
 
       <div style={{ padding: '1.25rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>

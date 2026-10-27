@@ -23,6 +23,7 @@ import {
   LayoutTemplate
 } from 'lucide-react';
 import api from '../../services/api';
+import SectionHelpButton from '../common/SectionHelpButton';
 import {
   ENGLISH_GOOGLE_FONTS,
   getFontDemoSnippet,
@@ -513,15 +514,29 @@ export default function PackageManagerPanel({ roomId, files = [], onSwitchTab, o
             </select>
           </div>
 
-          <button
-            onClick={() => setActiveTab('installed')}
-            className={`badge ${activeTab === 'installed' ? 'badge-primary' : 'badge-secondary'}`}
-            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: '0.35rem 0.65rem' }}
-            title="View installed packages"
-          >
-            <CheckCircle2 size={12} />
-            <span>{installed.length} Injected</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <button
+              onClick={() => setActiveTab('installed')}
+              className={`badge ${activeTab === 'installed' ? 'badge-primary' : 'badge-secondary'}`}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: '0.35rem 0.65rem' }}
+              title="View installed packages"
+            >
+              <CheckCircle2 size={12} />
+              <span>{installed.length} Injected</span>
+            </button>
+
+            <SectionHelpButton
+              title="Package Hub Help"
+              description="One-click CDN package injection, Google Fonts, font icon toolkits, and library templates."
+              tips={[
+                "Target File: Choose which workspace HTML file receives injected stylesheets and script tags.",
+                "1-Click CDN Injection: Instantly inject Bootstrap, Tailwind, React, Lucide, FontAwesome, or Chart.js.",
+                "Google Fonts Studio: Preview and inject typography stylesheets directly into your document.",
+                "Library Templates: Complete ready-to-run demo snippets to copy or insert directly into your code."
+              ]}
+              align="right"
+            />
+          </div>
         </div>
 
         {/* Tab Navigation Navigation Bar */}

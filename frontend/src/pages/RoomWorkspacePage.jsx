@@ -26,10 +26,13 @@ import {
   Sliders,
   PenTool,
   User,
+  UserCheck,
+  Columns,
   HelpCircle,
   X,
   Mail
 } from 'lucide-react';
+import SectionHelpButton from '../components/common/SectionHelpButton';
 import WhiteboardModal from '../components/whiteboard/WhiteboardModal';
 import RoomHeader from '../components/navigation/RoomHeader';
 import RoomOverview from '../components/room/RoomOverview';
@@ -84,6 +87,7 @@ export default function RoomWorkspacePage() {
   const [hasChatMention, setHasChatMention] = useState(false);
   const [chatMentionToast, setChatMentionToast] = useState(null);
   const [showWhiteboard, setShowWhiteboard] = useState(false);
+  const [showSplitPreview, setShowSplitPreview] = useState(false);
 
   useEffect(() => {
     activeTabRef.current = activeTab;
@@ -123,12 +127,6 @@ export default function RoomWorkspacePage() {
       if (isSender) return;
 
       const contentLower = (msg.content || '').toLowerCase();
-      const isAllMention =
-        contentLower.includes('@all') ||
-        contentLower.includes('@everyone') ||
-        contentLower.includes('@every one') ||
-        contentLower.includes('@everybody');
-
       const myCleanName = myName.replace(/\s+/g, '');
       const isDirectMention = Boolean(
         myName && (
@@ -137,7 +135,7 @@ export default function RoomWorkspacePage() {
         )
       );
 
-      const isMentioned = isAllMention || isDirectMention;
+      const isMentioned = isDirectMention;
 
       // Only increment unread count if user is currently on another workspace tab
       if (activeTabRef.current !== 'chat') {
@@ -1171,8 +1169,7 @@ export default function RoomWorkspacePage() {
           <div className="mention-toast-icon">@</div>
           <div className="mention-toast-content">
             <div className="mention-toast-header">
-              <strong>{chatMentionToast.sender}</strong>{' '}
-              {chatMentionToast.isAll ? 'mentioned @everyone in chat' : 'mentioned you in chat'}
+              <strong>{chatMentionToast.sender}</strong> mentioned you in chat
             </div>
             <div className="mention-toast-text">{chatMentionToast.content}</div>
           </div>
@@ -1281,7 +1278,7 @@ export default function RoomWorkspacePage() {
               title="Platform Creator & Contact (Saurav B) - Click to keep open"
               aria-label="Platform Creator & Contact"
             >
-              <HelpCircle size={18} />
+              <UserCheck size={18} />
             </button>
 
             {showCreatorPopup && (
@@ -1593,12 +1590,21 @@ export default function RoomWorkspacePage() {
                   </button>
 
                   <button
+                    className={`btn btn-sm ${showSplitPreview ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setShowSplitPreview(!showSplitPreview)}
+                    title={showSplitPreview ? "Close Split Live Preview" : "Split Live Preview: Code on left, live updating preview on right side"}
+                  >
+                    <Columns size={13} />
+                    <span className="hide-on-mobile">{showSplitPreview ? 'Close Split' : 'Live Preview Split'}</span>
+                  </button>
+
+                  <button
                     className="btn btn-secondary btn-sm"
                     onClick={() => setActiveTab('preview')}
-                    title="Open Live Web Preview tab"
+                    title="Open Live Web Preview full tab"
                   >
                     <Globe size={13} />
-                    <span className="hide-on-mobile">Live Preview</span>
+                    <span className="hide-on-mobile">Full Preview</span>
                   </button>
                 </div>
 
@@ -1636,6 +1642,24 @@ export default function RoomWorkspacePage() {
                   >
                     <Save size={14} />
                   </button>
+
+                  <SectionHelpButton
+                    title="Code Workspace Help"
+                    description="Collaborative multi-file project code editor with live syntax highlighting, Emmet, and templates."
+                    tips={[
+                      "Live Preview Split: Click 'Live Preview Split' to code on the left and see real-time updates on the right simultaneously.",
+                      "Mobile Quick Actions: Use Select All, Copy, Cut, Paste, and Undo toolbar chips on mobile touch screens.",
+                      "Emmet Expansion: Type HTML tags (e.g. div.card or ul>li*3) and hit Tab to expand.",
+                      "Universal Templates: Press Shift + ! or click Templates for full-stack starters.",
+                      "File Locking: Room hosts can lock individual files or the whole project for read-only presentations."
+                    ]}
+                    shortcuts={[
+                      { label: "Force Save File", key: "Ctrl + S" },
+                      { label: "Template Picker", key: "Shift + !" },
+                      { label: "Expand Emmet", key: "Tab" }
+                    ]}
+                    align="right"
+                  />
                 </div>
               </div>
 
@@ -1697,40 +1721,60 @@ export default function RoomWorkspacePage() {
                     readOnly={isCurrentFileLocked}
                   />
                 ) : (
-                  <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                    {activeFilePath.toLowerCase().endsWith('.svg') && viewSvgAsSource && (
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '0.3rem 0.85rem',
-                          backgroundColor: '#111520',
-                          borderBottom: '1px solid #232A3B',
-                          fontSize: '0.75rem'
-                        }}
-                      >
-                        <span style={{ color: '#94A3B8' }}>Editing SVG XML Source Markup</span>
-                        <button
-                          className="btn btn-subtle btn-sm"
-                          style={{ fontSize: '0.72rem', padding: '1px 8px' }}
-                          onClick={() => setViewSvgAsSource(false)}
+                  <div
+                    className={showSplitPreview ? "code-split-view-container" : ""}
+                    style={{ flex: 1, minHeight: 0, display: 'flex', position: 'relative' }}
+                  >
+                    <div
+                      className={showSplitPreview ? "code-split-editor-pane" : ""}
+                      style={showSplitPreview ? undefined : { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative' }}
+                    >
+                      {activeFilePath.toLowerCase().endsWith('.svg') && viewSvgAsSource && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '0.3rem 0.85rem',
+                            backgroundColor: '#111520',
+                            borderBottom: '1px solid #232A3B',
+                            fontSize: '0.75rem'
+                          }}
                         >
-                          🎨 Switch to Visual Preview
-                        </button>
+                          <span style={{ color: '#94A3B8' }}>Editing SVG XML Source Markup</span>
+                          <button
+                            className="btn btn-subtle btn-sm"
+                            style={{ fontSize: '0.72rem', padding: '1px 8px' }}
+                            onClick={() => setViewSvgAsSource(false)}
+                          >
+                            🎨 Switch to Visual Preview
+                          </button>
+                        </div>
+                      )}
+                      <MonacoEditorWrapper
+                        filePath={activeFilePath}
+                        content={activeFileContent}
+                        onChange={handleContentChange}
+                        onSave={() => handleSaveFile()}
+                        onOpenTemplatePicker={() => setShowTemplatePicker(true)}
+                        socket={socketRef.current}
+                        roomId={roomId}
+                        userSession={session}
+                        readOnly={isCurrentFileLocked}
+                      />
+                    </div>
+
+                    {showSplitPreview && (
+                      <div className="code-split-preview-pane">
+                        <LivePreview
+                          files={files}
+                          activeFilePath={activeFilePath}
+                          onSelectFile={handleSelectFile}
+                          isSplit={true}
+                          onCloseSplit={() => setShowSplitPreview(false)}
+                        />
                       </div>
                     )}
-                    <MonacoEditorWrapper
-                      filePath={activeFilePath}
-                      content={activeFileContent}
-                      onChange={handleContentChange}
-                      onSave={() => handleSaveFile()}
-                      onOpenTemplatePicker={() => setShowTemplatePicker(true)}
-                      socket={socketRef.current}
-                      roomId={roomId}
-                      userSession={session}
-                      readOnly={isCurrentFileLocked}
-                    />
                   </div>
                 )
               ) : (

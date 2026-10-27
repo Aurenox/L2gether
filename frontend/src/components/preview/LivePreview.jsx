@@ -10,10 +10,12 @@ import {
   Trash2,
   ArrowLeft,
   ArrowRight,
-  FileCode
+  FileCode,
+  X
 } from 'lucide-react';
+import SectionHelpButton from '../common/SectionHelpButton.jsx';
 
-export default function LivePreview({ files = [], activeFilePath = '', onSelectFile }) {
+export default function LivePreview({ files = [], activeFilePath = '', onSelectFile, isSplit = false, onCloseSplit }) {
   const [viewport, setViewport] = useState('desktop'); // desktop, tablet, mobile
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -548,11 +550,13 @@ export default function LivePreview({ files = [], activeFilePath = '', onSelectF
     return () => window.removeEventListener('message', handleMessage);
   }, [files, navIndex]);
 
-  // Update preview when files change if autoRefresh is enabled
+  // Update preview when files change if autoRefresh is enabled (with 200ms debounce)
   useEffect(() => {
-    if (autoRefresh) {
+    if (!autoRefresh) return;
+    const timer = setTimeout(() => {
       setRefreshKey((k) => k + 1);
-    }
+    }, 200);
+    return () => clearTimeout(timer);
   }, [files, autoRefresh]);
 
 
@@ -685,13 +689,37 @@ export default function LivePreview({ files = [], activeFilePath = '', onSelectF
             title="Toggle Preview Console"
           >
             <Terminal size={13} />
-            <span>Console ({logs.length})</span>
+            <span className="hide-on-mobile">Console ({logs.length})</span>
           </button>
+
+          <SectionHelpButton
+            title="Live Web Preview Help"
+            description="Render HTML, CSS, JavaScript, and CDN assets instantly in an isolated real-time sandbox."
+            tips={[
+              "Instant real-time live updates as you write code in the editor.",
+              "Switch responsive viewports between Desktop (100%), Tablet (768px), and Mobile (375px).",
+              "Automatic linking: HTML files automatically resolve workspace styles and scripts.",
+              "Embedded Web Console captures console.log(), warn(), and runtime error messages."
+            ]}
+            align="right"
+          />
+
+          {isSplit && onCloseSplit && (
+            <button
+              type="button"
+              className="btn btn-subtle btn-icon sm"
+              onClick={onCloseSplit}
+              title="Close Split Live Preview"
+              style={{ width: '28px', height: '28px', color: 'var(--text-muted)' }}
+            >
+              <X size={15} />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Preview Stage */}
-      <div className="preview-stage">
+      {/* Preview Stage (Zero outer scroll on desktop; device-view scroll for tablet/mobile) */}
+      <div className={`preview-stage ${viewport !== 'desktop' ? 'device-view' : ''}`}>
         <div
           className="preview-frame-wrapper"
           style={{ width: getViewportWidth() }}

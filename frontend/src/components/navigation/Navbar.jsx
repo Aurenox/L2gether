@@ -11,6 +11,7 @@ import {
   Shield,
   Clock,
   HelpCircle,
+  UserCheck,
   Sparkles,
   Mail,
   Github,
@@ -139,7 +140,7 @@ export default function Navbar() {
                 color: showCreatorPopup ? 'var(--accent-primary)' : 'var(--text-secondary)'
               }}
             >
-              <HelpCircle size={16} />
+              <UserCheck size={16} />
             </button>
 
             {showCreatorPopup && (
@@ -275,10 +276,10 @@ export default function Navbar() {
               setShowCreatorPopup(!showCreatorPopup);
               setIsCreatorSticky(!showCreatorPopup);
             }}
-            title="Creator Contact & Bug Report (?)"
+            title="Platform Creator & Developer (Saurav B)"
             aria-label="Platform Creator & Contact"
           >
-            <HelpCircle size={19} />
+            <UserCheck size={19} />
           </button>
           <button
             className="btn btn-subtle btn-icon"
