@@ -460,6 +460,12 @@ router.delete('/:roomId/participants/:sessionId', requireSession, requireRoomMem
       [roomId, sessionId]
     );
 
+    // Invalidate prior join requests so kicked user cannot auto-rejoin without owner approval
+    await db.query(
+      `DELETE FROM join_requests WHERE room_id = $1 AND session_id = $2`,
+      [roomId, sessionId]
+    );
+
     // Broadcast participant removal via socket.io
     const io = req.app.get('io');
     if (io) {

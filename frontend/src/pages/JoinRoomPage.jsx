@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { LogIn, ArrowRight, Clock, AlertTriangle, CheckCircle2, QrCode } from 'lucide-react';
+import { LogIn, ArrowRight, Shield, Clock, AlertTriangle, CheckCircle2, QrCode } from 'lucide-react';
 import Navbar from '../components/navigation/Navbar';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -51,6 +51,18 @@ export default function JoinRoomPage() {
           navigate(`/room/${targetRoomId}`, { replace: true });
           return;
         }
+
+        // If the user already has a pending join request awaiting approval (e.g. refreshed the client)
+        if (roomData && roomData.pendingApproval) {
+          setIsPendingApproval(true);
+          setActivePollRoomId(targetRoomId);
+          return;
+        }
+
+        // If user's join request was rejected
+        if (roomData && roomData.isRejected) {
+          setError('Your request to join this private room was rejected by the owner.');
+        }
       } catch (e) {
         // Not a joined member yet, proceed with standard join flow
       } finally {
@@ -99,6 +111,7 @@ export default function JoinRoomPage() {
       if (res.status === 'joined') {
         navigate(`/room/${cleanRoomId}`);
       } else if (res.status === 'pending') {
+        window.history.replaceState(null, '', `/join/${cleanRoomId}`);
         setIsPendingApproval(true);
         setActivePollRoomId(cleanRoomId);
       }
@@ -121,12 +134,23 @@ export default function JoinRoomPage() {
     const interval = setInterval(async () => {
       try {
         const room = await api.getRoom(activePollRoomId);
-        if (room && room.isMember) {
+        if (room && (room.isMember || room.isOwner)) {
           clearInterval(interval);
           navigate(`/room/${activePollRoomId}`);
+        } else if (room && !room.pendingApproval && !room.isMember) {
+          // No longer pending and not admitted -> rejected or removed
+          clearInterval(interval);
+          setIsPendingApproval(false);
+          setError('Your request to join this private room was rejected by the owner.');
         }
-      } catch (e) {}
-    }, 2500);
+      } catch (e) {
+        if (e.status === 403 || e.message?.toLowerCase().includes('reject')) {
+          clearInterval(interval);
+          setIsPendingApproval(false);
+          setError('Your request to join this private room was rejected by the owner.');
+        }
+      }
+    }, 2000);
 
     return () => clearInterval(interval);
   }, [isPendingApproval, activePollRoomId, navigate]);

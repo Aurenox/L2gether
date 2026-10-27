@@ -220,6 +220,7 @@ export async function getRoomDetails(roomId, currentSessionId = null) {
   let userRole = null;
   let isMember = false;
   let pendingApproval = false;
+  let isRejected = false;
 
   if (currentSessionId) {
     const memberRes = await db.query(
@@ -233,7 +234,7 @@ export async function getRoomDetails(roomId, currentSessionId = null) {
       userRole = memberRes.rows[0].role;
       isMember = true;
     } else {
-      // Check if pending join request
+      // Check if pending or rejected join request
       const reqRes = await db.query(
         `SELECT status 
          FROM join_requests 
@@ -243,6 +244,8 @@ export async function getRoomDetails(roomId, currentSessionId = null) {
       if (reqRes.rows.length > 0) {
         if (reqRes.rows[0].status === 'pending') {
           pendingApproval = true;
+        } else if (reqRes.rows[0].status === 'rejected') {
+          isRejected = true;
         }
       }
     }
@@ -290,6 +293,7 @@ export async function getRoomDetails(roomId, currentSessionId = null) {
     userRole,
     isMember,
     pendingApproval,
+    isRejected,
     pendingRequestCount
   };
 }
@@ -344,9 +348,18 @@ export async function joinRoom({ roomId, sessionId, reapply = false }) {
     [roomId, sessionId]
   );
 
+  // Check if participant was previously kicked/revoked by the owner
+  const { rows: memRows } = await db.query(
+    `SELECT revoked_at FROM room_memberships WHERE room_id = $1 AND session_id = $2`,
+    [roomId, sessionId]
+  );
+  const wasKicked = memRows.length > 0 && Boolean(memRows[0].revoked_at);
+
   if (existingReq.rows.length > 0) {
     const reqStatus = existingReq.rows[0].status;
-    if (reqStatus === 'approved') {
+    const reqId = existingReq.rows[0].id;
+
+    if (reqStatus === 'approved' && !wasKicked) {
       // Grant membership
       const membershipId = `mem_${uuidv4().slice(0, 12)}`;
       await db.query(
@@ -360,12 +373,12 @@ export async function joinRoom({ roomId, sessionId, reapply = false }) {
       if (reapply) {
         await db.query(
           `UPDATE join_requests SET status = 'pending', reviewed_at = NULL, reviewed_by = NULL, created_at = datetime('now') WHERE id = $1`,
-          [existingReq.rows[0].id]
+          [reqId]
         );
         return {
           status: 'pending',
           message: 'Join request re-sent to the room owner for approval.',
-          requestId: existingReq.rows[0].id
+          requestId: reqId
         };
       }
       return {
@@ -374,7 +387,18 @@ export async function joinRoom({ roomId, sessionId, reapply = false }) {
         error: 'Your request to join this private room was rejected by the owner.'
       };
     } else {
-      return { status: 'pending', message: 'Join request is pending approval by the room owner.' };
+      // If wasKicked or existing status needs refresh to pending
+      if (wasKicked || reqStatus !== 'pending') {
+        await db.query(
+          `UPDATE join_requests SET status = 'pending', reviewed_at = NULL, reviewed_by = NULL, created_at = datetime('now') WHERE id = $1`,
+          [reqId]
+        );
+      }
+      return {
+        status: 'pending',
+        message: 'Join request sent. Please wait for the room owner to approve your access.',
+        requestId: reqId
+      };
     }
   }
 
