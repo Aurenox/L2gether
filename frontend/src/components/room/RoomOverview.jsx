@@ -14,6 +14,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { getRoomJoinUrl } from '../../utils/url';
 
 export default function RoomOverview({
   room,
@@ -23,7 +24,7 @@ export default function RoomOverview({
   onOpenParticipants
 }) {
   const [copied, setCopied] = useState(false);
-  const joinUrl = `${window.location.origin}/join/${room?.id}`;
+  const joinUrl = getRoomJoinUrl(room?.id);
 
   const handleCopy = async () => {
     try {
@@ -76,7 +77,7 @@ export default function RoomOverview({
         </div>
 
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-          {room?.description || 'Collaborate in real time with shared code editing, chat, file sharing, isolated code execution, and WebRTC audio calls.'}
+          {room?.description || 'Collaborate in real time with shared code editing, chat, file sharing, live web preview, and WebRTC audio calls.'}
         </p>
 
         {/* Quick invite link bar */}

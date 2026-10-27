@@ -20,6 +20,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import Navbar from '../components/navigation/Navbar';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import { getRoomJoinUrl } from '../utils/url';
 
 export default function HostRoomPage() {
   const navigate = useNavigate();
@@ -94,13 +95,22 @@ export default function HostRoomPage() {
         setSessionData(res.session);
       }
 
-      let inviteUrl = `${window.location.origin}/join/${res.room.id}`;
-      try {
-        const net = await api.getNetworkInfo();
-        if (net?.lanIp && net.lanIp !== 'localhost') {
-          inviteUrl = `http://${net.lanIp}:5173/join/${res.room.id}`;
-        }
-      } catch (e) {}
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      let inviteUrl = getRoomJoinUrl(res.room.id);
+      if (isLocal) {
+        try {
+          const net = await api.getNetworkInfo();
+          if (
+            !net?.isProduction &&
+            net?.lanIp &&
+            net.lanIp !== 'localhost' &&
+            !net.lanIp.startsWith('10.') &&
+            !net.lanIp.startsWith('172.')
+          ) {
+            inviteUrl = `http://${net.lanIp}:5173/join/${res.room.id}`;
+          }
+        } catch (e) {}
+      }
 
       // Show creation credential card with QR code & recovery key
       setCreatedRoomInfo({

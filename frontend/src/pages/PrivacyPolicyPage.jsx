@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Clock, Lock, Server, FileText } from 'lucide-react';
+import { Shield, Clock, Lock, Globe, FileText } from 'lucide-react';
 import Navbar from '../components/navigation/Navbar';
 
 export default function PrivacyPolicyPage() {
@@ -54,12 +54,9 @@ export default function PrivacyPolicyPage() {
 
           <div id="security" className="card">
             <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Server size={20} color="var(--accent-secondary)" />
-              3. Isolated Code Execution & Live Preview Safety
+              <Globe size={20} color="var(--accent-secondary)" />
+              3. Sandboxed Live Web Preview Safety
             </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '0.75rem' }}>
-              User code is never executed inside the main Express application server. Code runs in restricted, bounded runner subprocesses with execution timeouts (10 seconds), output buffer quotas (64KB), and non-elevated permissions.
-            </p>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6 }}>
               Web previews are isolated inside sandboxed iframes preventing unauthorized access to host cookies, session tokens, or elevated APIs.
             </p>

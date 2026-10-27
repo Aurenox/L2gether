@@ -2,6 +2,17 @@
    L2GETHER LAYOUT & COMPONENT STYLES
    =================================================================== */
 
+/* Smooth anchor scrolling & header offset */
+html {
+  scroll-behavior: smooth;
+}
+
+#features,
+#how-it-works,
+#security {
+  scroll-margin-top: 80px;
+}
+
 /* App Header / Navigation */
 .app-nav {
   height: 64px;
@@ -976,6 +987,48 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Navigation Creator Popover & Bug Report */
+.nav-creator-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.nav-creator-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  left: auto;
+  bottom: auto;
+  width: 290px;
+  z-index: 200;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 12px 14px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.nav-creator-popover::before {
+  content: '';
+  position: absolute;
+  top: -14px;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 16px;
+}
+
+.nav-creator-bug-report {
+  margin-top: 10px;
+  padding: 9px 11px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  font-size: 0.74rem;
 }
 
 .activity-creator-popover {

@@ -335,8 +335,30 @@ export default function HomePage() {
             <ul>
               <li><Link to="/host">Host Room</Link></li>
               <li><Link to="/join">Join Room</Link></li>
-              <li><Link to="/#features">Features</Link></li>
-              <li><Link to="/#how-it-works">How It Works</Link></li>
+              <li>
+                <a
+                  href="#features"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById('features')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    window.history.pushState(null, '', '/#features');
+                  }}
+                >
+                  Features
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#how-it-works"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    window.history.pushState(null, '', '/#how-it-works');
+                  }}
+                >
+                  How It Works
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -344,7 +366,7 @@ export default function HomePage() {
             <h4>Security &amp; Privacy</h4>
             <ul>
               <li><Link to="/privacy">Retention Policy</Link></li>
-              <li><Link to="/privacy#security">Code Sandbox Isolation</Link></li>
+              <li><Link to="/privacy#security">Live Preview Isolation</Link></li>
               <li><Link to="/privacy#guest">Guest Access Info</Link></li>
             </ul>
           </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { X, Copy, Check, Share2, Smartphone, Wifi } from 'lucide-react';
 import api from '../../services/api';
+import { getRoomJoinUrl } from '../../utils/url';
 
 export default function ShareQRModal({ room, onClose }) {
   const [copied, setCopied] = useState(false);
@@ -13,22 +14,34 @@ export default function ShareQRModal({ room, onClose }) {
     setIsLocalhost(isLocal);
 
     async function fetchNetworkInfo() {
+      // In production (or if not running on localhost), always use the public URL
+      if (!isLocal) {
+        setPhoneUrl(getRoomJoinUrl(room?.id));
+        return;
+      }
+
       try {
         const info = await api.getNetworkInfo();
-        if (info?.lanIp && info.lanIp !== 'localhost') {
+        if (
+          !info?.isProduction &&
+          info?.lanIp &&
+          info.lanIp !== 'localhost' &&
+          !info.lanIp.startsWith('10.') &&
+          !info.lanIp.startsWith('172.')
+        ) {
           setPhoneUrl(`http://${info.lanIp}:5173/join/${room?.id}`);
         } else {
-          setPhoneUrl(`${window.location.origin}/join/${room?.id}`);
+          setPhoneUrl(getRoomJoinUrl(room?.id));
         }
       } catch (e) {
-        setPhoneUrl(`${window.location.origin}/join/${room?.id}`);
+        setPhoneUrl(getRoomJoinUrl(room?.id));
       }
     }
 
     fetchNetworkInfo();
   }, [room?.id]);
 
-  const activeUrl = phoneUrl || `${window.location.origin}/join/${room?.id}`;
+  const activeUrl = phoneUrl || getRoomJoinUrl(room?.id);
 
   const handleCopy = async () => {
     try {

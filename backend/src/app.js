@@ -80,6 +80,15 @@ export function createApp() {
 
   // Network info endpoint (provides LAN IP for phone QR scanning & cross-device pairing)
   app.get('/api/network-info', (req, res) => {
+    const isProduction = config.nodeEnv === 'production';
+    if (isProduction) {
+      return res.json({
+        lanIp: 'production',
+        phoneBaseUrl: config.clientUrl || 'https://l2gether.vercel.app',
+        isProduction: true
+      });
+    }
+
     let lanIp = 'localhost';
     try {
       const interfaces = os.networkInterfaces();
@@ -96,7 +105,8 @@ export function createApp() {
 
     res.json({
       lanIp,
-      phoneBaseUrl: lanIp !== 'localhost' ? `http://${lanIp}:5173` : 'http://localhost:5173'
+      phoneBaseUrl: lanIp !== 'localhost' ? `http://${lanIp}:5173` : (config.clientUrl || 'http://localhost:5173'),
+      isProduction: false
     });
   });
 

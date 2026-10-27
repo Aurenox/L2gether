@@ -13,12 +13,15 @@ import RoomExpiredPage from './pages/RoomExpiredPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import NotFoundPage from './pages/NotFoundPage';
 
+import ScrollToAnchor from './components/common/ScrollToAnchor';
+
 export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
         <AudioCallProvider>
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <ScrollToAnchor />
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/host" element={<HostRoomPage />} />

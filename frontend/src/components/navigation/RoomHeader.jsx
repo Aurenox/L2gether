@@ -26,6 +26,7 @@ import {
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAudioCall } from '../../contexts/AudioContext';
 import Logo from '../brand/Logo';
+import { getRoomJoinUrl } from '../../utils/url';
 
 export default function RoomHeader({
   room,
@@ -91,7 +92,7 @@ export default function RoomHeader({
   }, [room?.expiresAt]);
 
   const copyRoomLink = async () => {
-    const url = window.location.origin + `/join/${room?.id}`;
+    const url = getRoomJoinUrl(room?.id);
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
