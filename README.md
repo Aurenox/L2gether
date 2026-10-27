@@ -277,8 +277,8 @@ Currently, L2gether focuses on client-side and sandboxed web development. Our ne
 
 ### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/Aurenox/L2gather.git
-cd L2gather
+git clone https://github.com/Aurenox/L2gether.git
+cd L2gether
 ```
 
 ### Step 2: Install All Dependencies
