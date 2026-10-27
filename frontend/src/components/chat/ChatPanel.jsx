@@ -18,7 +18,98 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import SectionHelpButton from '../common/SectionHelpButton.jsx';
+import CodeSnippetViewer from './CodeSnippetViewer';
 import { formatLocalTime } from '../../utils/date';
+
+function renderMentionsOnly(text, isOwn, myName, parentKey = 0) {
+  if (!text) return null;
+  return text.split(/(@[a-zA-Z0-9_\s-]{1,25}\b|@everyone\b|@all\b)/gi).map((part, idx) => {
+    if (part.startsWith('@')) {
+      const rawName = part.slice(1).trim().toLowerCase();
+      const isAll =
+        rawName === 'all' ||
+        rawName === 'everyone' ||
+        rawName === 'every one' ||
+        rawName === 'everybody';
+      const isMe = !isOwn && myName && (rawName === myName || rawName === myName.replace(/\s+/g, ''));
+      return (
+        <span
+          key={`${parentKey}-${idx}`}
+          className={`chat-mention-pill ${isAll ? 'mention-all' : ''} ${isMe ? 'mention-me' : ''}`}
+          title={isAll ? 'Mentions everyone in room' : isMe ? 'Mentions you' : `Mentions ${part}`}
+        >
+          {part}
+        </span>
+      );
+    }
+    return part;
+  });
+}
+
+function renderTextWithMentionsAndInlineCode(text, isOwn, myName) {
+  if (!text) return null;
+
+  if (text.includes('`')) {
+    const inlineParts = text.split(/(`[^`\n]+`)/g);
+    return (
+      <span>
+        {inlineParts.map((sub, sIdx) => {
+          if (sub.startsWith('`') && sub.endsWith('`') && sub.length > 2) {
+            return (
+              <code key={sIdx} className="inline-code-pill">
+                {sub.slice(1, -1)}
+              </code>
+            );
+          }
+          return renderMentionsOnly(sub, isOwn, myName, sIdx);
+        })}
+      </span>
+    );
+  }
+
+  return renderMentionsOnly(text, isOwn, myName);
+}
+
+function renderFormattedMessageContent(content, isOwn, myName) {
+  if (!content) return null;
+
+  if (content.includes('```')) {
+    const parts = content.split(/(```[\s\S]*?```)/g);
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {parts.map((part, idx) => {
+          if (part.startsWith('```') && part.endsWith('```')) {
+            const inner = part.slice(3, -3);
+            const firstLineBreak = inner.indexOf('\n');
+            let lang = 'javascript';
+            let code = inner;
+            if (firstLineBreak !== -1) {
+              const possibleLang = inner.slice(0, firstLineBreak).trim();
+              if (possibleLang && /^[a-zA-Z0-9_+#-]+$/.test(possibleLang)) {
+                lang = possibleLang;
+                code = inner.slice(firstLineBreak + 1);
+              }
+            }
+            return (
+              <CodeSnippetViewer
+                key={idx}
+                code={code.replace(/^\n+|\n+$/g, '')}
+                language={lang}
+              />
+            );
+          }
+          return (
+            <div key={idx}>
+              {renderTextWithMentionsAndInlineCode(part, isOwn, myName)}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return renderTextWithMentionsAndInlineCode(content, isOwn, myName);
+}
 
 export default function ChatPanel({
   roomId,
@@ -642,28 +733,10 @@ export default function ChatPanel({
                     </div>
                   )}
                   {isCode ? (
-                    <div className="code-message-block">
-                      <div className="code-message-header">
-                        <span style={{ textTransform: 'uppercase', fontWeight: 600, fontSize: '0.72rem' }}>
-                          {m.metadata?.language || 'code'}
-                        </span>
-                        <button
-                          className="btn btn-subtle btn-sm"
-                          style={{ padding: '2px 6px', fontSize: '0.7rem' }}
-                          onClick={() => handleCopyCode(m.content, m.id)}
-                        >
-                          {copiedSnippetId === m.id ? (
-                            <Check size={12} color="var(--state-success)" />
-                          ) : (
-                            <Copy size={12} />
-                          )}
-                          <span>{copiedSnippetId === m.id ? 'Copied' : 'Copy'}</span>
-                        </button>
-                      </div>
-                      <pre className="code-message-content">
-                        <code>{m.content}</code>
-                      </pre>
-                    </div>
+                    <CodeSnippetViewer
+                      code={m.content}
+                      language={m.metadata?.language || 'javascript'}
+                    />
                   ) : isFile ? (
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
@@ -747,30 +820,7 @@ export default function ChatPanel({
                       </div>
                     </div>
                   ) : (
-                    <span>
-                      {m.content?.split(/(@[a-zA-Z0-9_\s-]{1,25}\b|@everyone\b|@all\b)/gi).map((part, idx) => {
-                        if (part.startsWith('@')) {
-                          const rawName = part.slice(1).trim().toLowerCase();
-                          const isAll =
-                            rawName === 'all' ||
-                            rawName === 'everyone' ||
-                            rawName === 'every one' ||
-                            rawName === 'everybody';
-                          // Crucial: Senders never have mention-me highlight on their own sent messages
-                          const isMe = !isOwn && myName && (rawName === myName || rawName === myName.replace(/\s+/g, ''));
-                          return (
-                            <span
-                              key={idx}
-                              className={`chat-mention-pill ${isAll ? 'mention-all' : ''} ${isMe ? 'mention-me' : ''}`}
-                              title={isAll ? 'Mentions everyone in room' : isMe ? 'Mentions you' : `Mentions ${part}`}
-                            >
-                              {part}
-                            </span>
-                          );
-                        }
-                        return part;
-                      })}
-                    </span>
+                    renderFormattedMessageContent(m.content, isOwn, myName)
                   )}
                 </div>
               </div>

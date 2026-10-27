@@ -102,38 +102,21 @@ export default function SectionHelpButton({
             width: coords ? `${coords.width}px` : '320px',
             maxWidth: 'calc(100vw - 24px)',
             maxHeight: 'calc(100vh - 80px)',
-            overflowY: 'auto',
-            backgroundColor: '#111520',
-            border: '1px solid #232A3B',
-            borderRadius: 'var(--radius-md, 8px)',
-            boxShadow: '0 16px 48px rgba(0, 0, 0, 0.75)',
-            padding: '0.85rem',
-            zIndex: 100000,
-            animation: 'fadeIn 0.15s ease-out',
-            color: 'var(--text-main, #FFFFFF)'
+            overflowY: 'auto'
           }}
         >
           {/* Header */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '0.5rem',
-              paddingBottom: '0.45rem',
-              borderBottom: '1px solid #232A3B'
-            }}
-          >
+          <div className="section-help-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <HelpCircle size={15} color="var(--accent-primary, #3B82F6)" />
-              <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{title}</span>
+              <HelpCircle size={15} color="var(--accent-primary)" />
+              <span className="section-help-title">{title}</span>
             </div>
             <button
               type="button"
               className="btn btn-subtle btn-icon sm"
               onClick={() => setIsOpen(false)}
               title="Close Help"
-              style={{ width: '20px', height: '20px', padding: 0 }}
+              style={{ width: '22px', height: '22px', padding: 0 }}
             >
               <X size={13} />
             </button>
@@ -141,14 +124,7 @@ export default function SectionHelpButton({
 
           {/* Description */}
           {description && (
-            <p
-              style={{
-                fontSize: '0.78rem',
-                color: '#94A3B8',
-                lineHeight: 1.45,
-                margin: '0 0 0.65rem 0'
-              }}
-            >
+            <p className="section-help-description">
               {description}
             </p>
           )}
@@ -156,27 +132,10 @@ export default function SectionHelpButton({
           {/* Tips List */}
           {tips.length > 0 && (
             <div style={{ marginBottom: shortcuts.length > 0 ? '0.65rem' : 0 }}>
-              <div
-                style={{
-                  fontSize: '0.72rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                  color: 'var(--accent-primary, #3B82F6)',
-                  fontWeight: 600,
-                  marginBottom: '0.35rem'
-                }}
-              >
+              <div className="section-help-subtitle">
                 Key Features &amp; Tips
               </div>
-              <ul
-                style={{
-                  margin: 0,
-                  paddingLeft: '1.1rem',
-                  fontSize: '0.75rem',
-                  color: '#CBD5E1',
-                  lineHeight: 1.45
-                }}
-              >
+              <ul className="section-help-tips-list">
                 {tips.map((tip, idx) => (
                   <li key={idx} style={{ marginBottom: '0.25rem' }}>
                     {tip}
@@ -188,27 +147,20 @@ export default function SectionHelpButton({
 
           {/* Shortcuts List */}
           {shortcuts.length > 0 && (
-            <div
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                padding: '0.45rem 0.6rem',
-                borderRadius: 'var(--radius-sm, 6px)',
-                border: '1px solid rgba(255, 255, 255, 0.05)'
-              }}
-            >
+            <div className="section-help-shortcuts-box">
               <div
                 style={{
                   fontSize: '0.7rem',
                   textTransform: 'uppercase',
                   letterSpacing: '0.04em',
-                  color: '#94A3B8',
+                  color: 'var(--text-muted)',
                   fontWeight: 600,
-                  marginBottom: '0.3rem'
+                  marginBottom: '0.35rem'
                 }}
               >
                 Shortcuts
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {shortcuts.map((sc, idx) => (
                   <div
                     key={idx}
@@ -216,21 +168,11 @@ export default function SectionHelpButton({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      fontSize: '0.73rem'
+                      fontSize: '0.74rem'
                     }}
                   >
-                    <span style={{ color: '#94A3B8' }}>{sc.label}</span>
-                    <kbd
-                      style={{
-                        backgroundColor: '#1E293B',
-                        color: '#F8FAFC',
-                        padding: '1px 5px',
-                        borderRadius: '3px',
-                        border: '1px solid #334155',
-                        fontSize: '0.68rem',
-                        fontFamily: 'var(--font-mono, monospace)'
-                      }}
-                    >
+                    <span className="section-help-shortcut-label">{sc.label}</span>
+                    <kbd className="section-help-kbd">
                       {sc.key}
                     </kbd>
                   </div>
