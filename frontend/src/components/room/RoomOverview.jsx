@@ -22,6 +22,7 @@ import { formatLocalDate, formatLocalDateTime } from '../../utils/date';
 export default function RoomOverview({
   room,
   participantCount,
+  pendingRequestCount = 0,
   onNavigateTab,
   onOpenQR,
   onOpenParticipants,
@@ -237,9 +238,18 @@ export default function RoomOverview({
             <button
               className="btn btn-subtle btn-sm"
               onClick={onOpenParticipants}
-              style={{ fontSize: '0.72rem', padding: '2px 6px' }}
+              style={{ fontSize: '0.72rem', padding: '2px 6px', position: 'relative' }}
+              title={room?.isOwner && pendingRequestCount > 0 ? `${pendingRequestCount} pending join request(s)` : undefined}
             >
-              View All ({participantCount || room?.participantCount || 1})
+              <span>View All ({participantCount || room?.participantCount || 1})</span>
+              {room?.isOwner && pendingRequestCount > 0 && (
+                <span
+                  className="pending-requests-badge"
+                  style={{ top: '-4px', right: '-4px' }}
+                >
+                  {pendingRequestCount > 9 ? '9+' : pendingRequestCount}
+                </span>
+              )}
             </button>
           </div>
 

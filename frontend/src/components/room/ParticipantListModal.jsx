@@ -7,11 +7,15 @@ export default function ParticipantListModal({
   roomId,
   isOwner,
   currentSessionId,
+  pendingRequestCount = 0,
+  onPendingCountChange,
   onClose
 }) {
   const [participants, setParticipants] = useState([]);
   const [requests, setRequests] = useState([]);
-  const [activeTab, setActiveTab] = useState('members'); // members, requests
+  const [activeTab, setActiveTab] = useState(
+    isOwner && pendingRequestCount > 0 ? 'requests' : 'members'
+  );
 
   const loadData = async () => {
     try {
@@ -20,7 +24,11 @@ export default function ParticipantListModal({
 
       if (isOwner) {
         const rRes = await api.getPendingRequests(roomId);
-        setRequests(rRes.requests || []);
+        const reqList = rRes.requests || [];
+        setRequests(reqList);
+        if (onPendingCountChange) {
+          onPendingCountChange(reqList.length);
+        }
       }
     } catch (e) {
       console.error('Failed to load participants:', e);
@@ -83,8 +91,21 @@ export default function ParticipantListModal({
             <button
               className={`btn btn-sm ${activeTab === 'requests' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setActiveTab('requests')}
+              style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
-              Pending Approval ({requests.length})
+              <span>Pending Approval</span>
+              <span
+                style={{
+                  backgroundColor: requests.length > 0 ? 'var(--state-error, #EF4444)' : 'rgba(255, 255, 255, 0.15)',
+                  color: '#FFFFFF',
+                  padding: '1px 6px',
+                  borderRadius: '999px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700
+                }}
+              >
+                {requests.length}
+              </span>
             </button>
           </div>
         )}

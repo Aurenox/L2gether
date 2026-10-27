@@ -248,6 +248,20 @@ export async function getRoomDetails(roomId, currentSessionId = null) {
     }
   }
 
+  // Count pending join requests if user is owner
+  let pendingRequestCount = 0;
+  if (currentSessionId && currentSessionId === room.owner_session_id) {
+    try {
+      const pendingRes = await db.query(
+        `SELECT COUNT(*) as count FROM join_requests WHERE room_id = $1 AND status = 'pending'`,
+        [roomId]
+      );
+      pendingRequestCount = parseInt(pendingRes.rows[0]?.count || '0', 10);
+    } catch (e) {
+      pendingRequestCount = 0;
+    }
+  }
+
   const participants = await getRoomParticipants(roomId);
 
   return {
@@ -271,7 +285,8 @@ export async function getRoomDetails(roomId, currentSessionId = null) {
     participants,
     userRole,
     isMember,
-    pendingApproval
+    pendingApproval,
+    pendingRequestCount
   };
 }
 

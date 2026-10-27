@@ -83,6 +83,7 @@ export default function RoomWorkspacePage() {
   // Participants & Socket Instance & Chat Notifications
   const [socketInstance, setSocketInstance] = useState(null);
   const [participants, setParticipants] = useState([]);
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [hasChatMention, setHasChatMention] = useState(false);
   const [chatMentionToast, setChatMentionToast] = useState(null);
@@ -456,6 +457,9 @@ export default function RoomWorkspacePage() {
         }
 
         setRoom(roomData);
+        if (roomData.pendingRequestCount !== undefined) {
+          setPendingRequestCount(roomData.pendingRequestCount || 0);
+        }
         setIsEditingLocked(Boolean(roomData.isEditingLocked));
         setLockedFiles(roomData.lockedFiles || []);
         if (roomData.participants) {
@@ -683,6 +687,21 @@ export default function RoomWorkspacePage() {
           });
         });
 
+        // Real-time pending join requests badge sync
+        socket.on('pending_requests_updated', ({ requestCount }) => {
+          if (typeof requestCount === 'number') {
+            setPendingRequestCount(requestCount);
+          }
+        });
+
+        socket.on('new_join_request', (data) => {
+          if (typeof data?.requestCount === 'number') {
+            setPendingRequestCount(data.requestCount);
+          } else {
+            setPendingRequestCount(prev => prev + 1);
+          }
+        });
+
       } catch (err) {
         if (err.status === 410 || err.code === 'ROOM_EXPIRED') {
           navigate(`/room/${roomId}/expired`);
@@ -717,6 +736,8 @@ export default function RoomWorkspacePage() {
         socketRef.current.off('room_participants_updated');
         socketRef.current.off('user_joined');
         socketRef.current.off('user_left');
+        socketRef.current.off('pending_requests_updated');
+        socketRef.current.off('new_join_request');
       }
     };
   }, [roomId, navigate, session?.token]);
@@ -1137,6 +1158,7 @@ export default function RoomWorkspacePage() {
       <RoomHeader
         room={room}
         participantCount={currentParticipantCount}
+        pendingRequestCount={pendingRequestCount}
         isEditingLocked={Boolean(isEditingLocked || (lockedFiles || []).includes('*'))}
         onToggleEditLock={handleToggleEditLock}
         onOpenQR={() => setShowQRModal(true)}
@@ -1275,9 +1297,18 @@ export default function RoomWorkspacePage() {
           <button
             className="activity-tab-btn"
             onClick={() => setShowParticipantsModal(true)}
-            title="Participants & Join Requests"
+            title={room?.isOwner && pendingRequestCount > 0 ? `${pendingRequestCount} pending join request(s)` : "Participants & Join Requests"}
+            style={{ position: 'relative' }}
           >
             <Users size={18} />
+            {room?.isOwner && pendingRequestCount > 0 && (
+              <span
+                className="pending-requests-badge"
+                title={`${pendingRequestCount} pending join request(s)`}
+              >
+                {pendingRequestCount > 9 ? '9+' : pendingRequestCount}
+              </span>
+            )}
           </button>
 
           {/* ❓ Creator Contact & Info (? Symbol) */}
@@ -1388,6 +1419,7 @@ export default function RoomWorkspacePage() {
           <RoomOverview
             room={room}
             participantCount={currentParticipantCount}
+            pendingRequestCount={pendingRequestCount}
             onNavigateTab={(tab) => setActiveTab(tab)}
             onOpenQR={() => setShowQRModal(true)}
             onOpenParticipants={() => setShowParticipantsModal(true)}
@@ -1855,6 +1887,8 @@ export default function RoomWorkspacePage() {
           roomId={roomId}
           isOwner={room?.isOwner}
           currentSessionId={session?.sessionId}
+          pendingRequestCount={pendingRequestCount}
+          onPendingCountChange={setPendingRequestCount}
           onClose={() => setShowParticipantsModal(false)}
         />
       )}

@@ -1,7 +1,7 @@
 import db from '../database/db.js';
 import { v4 as uuidv4 } from 'uuid';
 import { hashToken } from '../middleware/auth.js';
-import { setRoomEditingLock, getRoomParticipants } from '../services/roomService.js';
+import { setRoomEditingLock, getRoomParticipants, getPendingJoinRequests } from '../services/roomService.js';
 import {
   startInteractiveSession,
   sendInputToInteractiveSession,
@@ -150,6 +150,17 @@ export function setupSockets(io) {
           participantCount,
           participants
         });
+
+        // If owner, send pending requests immediately
+        if (isOwner) {
+          getPendingJoinRequests(roomId).then((requests) => {
+            socket.emit('pending_requests_updated', {
+              roomId,
+              requestCount: requests.length,
+              requests
+            });
+          }).catch(() => {});
+        }
       } catch (e) {
         socket.to(roomId).emit('user_joined', {
           sessionId: user.sessionId,
@@ -508,6 +519,22 @@ export function setupSockets(io) {
     socket.on('audio_sync_request', ({ roomId }) => {
       if (!roomId) return;
       broadcastAudioParticipants(io, roomId);
+    });
+
+    // On-demand pending requests sync for room owner
+    socket.on('get_pending_requests', async ({ roomId }) => {
+      if (!roomId) return;
+      try {
+        const { rows } = await db.query(`SELECT owner_session_id FROM rooms WHERE id = $1`, [roomId]);
+        if (rows.length > 0 && rows[0].owner_session_id === user.sessionId) {
+          const requests = await getPendingJoinRequests(roomId);
+          socket.emit('pending_requests_updated', {
+            roomId,
+            requestCount: requests.length,
+            requests
+          });
+        }
+      } catch (e) {}
     });
 
     socket.on('audio_offer', ({ targetSocketId, offer }) => {

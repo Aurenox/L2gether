@@ -32,6 +32,7 @@ import { getRoomJoinUrl } from '../../utils/url';
 export default function RoomHeader({
   room,
   participantCount,
+  pendingRequestCount = 0,
   isEditingLocked,
   onToggleEditLock,
   onOpenQR,
@@ -207,10 +208,23 @@ export default function RoomHeader({
         <button
           className="btn btn-secondary btn-sm"
           onClick={onOpenParticipants}
-          title="Active Participants"
+          style={{ position: 'relative' }}
+          title={
+            room?.isOwner && pendingRequestCount > 0
+              ? `${pendingRequestCount} pending join request(s) awaiting approval`
+              : "Active Participants"
+          }
         >
           <Users size={14} />
           <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{participantCount || room?.participantCount || 1}</span>
+          {room?.isOwner && pendingRequestCount > 0 && (
+            <span
+              className="pending-requests-badge"
+              title={`${pendingRequestCount} pending join request(s)`}
+            >
+              {pendingRequestCount > 9 ? '9+' : pendingRequestCount}
+            </span>
+          )}
         </button>
 
         {/* WebRTC Audio Call Controls */}
@@ -331,8 +345,18 @@ export default function RoomHeader({
           onClick={() => setShowMobileMore(!showMobileMore)}
           aria-label="Room Menu Options"
           title="Room Menu Options"
+          style={{ position: 'relative' }}
         >
           <Menu size={18} />
+          {room?.isOwner && pendingRequestCount > 0 && (
+            <span
+              className="pending-requests-badge"
+              style={{ top: '-4px', right: '-4px' }}
+              title={`${pendingRequestCount} pending join request(s)`}
+            >
+              {pendingRequestCount > 9 ? '9+' : pendingRequestCount}
+            </span>
+          )}
         </button>
       </div>
 
@@ -361,6 +385,25 @@ export default function RoomHeader({
             </div>
 
             <div className="mobile-header-menu-items">
+              <button
+                className="mobile-header-menu-btn"
+                onClick={() => {
+                  onOpenParticipants();
+                  setShowMobileMore(false);
+                }}
+              >
+                <Users size={16} />
+                <span>Participants ({participantCount || room?.participantCount || 1})</span>
+                {room?.isOwner && pendingRequestCount > 0 && (
+                  <span
+                    className="pending-requests-badge"
+                    style={{ position: 'static', marginLeft: 'auto' }}
+                  >
+                    {pendingRequestCount} new
+                  </span>
+                )}
+              </button>
+
               {room?.isOwner && (
                 <button
                   className="mobile-header-menu-btn"

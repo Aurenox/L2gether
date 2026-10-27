@@ -291,6 +291,24 @@ router.post('/:roomId/join', async (req, res) => {
           });
         }).catch(() => {});
       }
+    } else if (result.status === 'pending') {
+      const io = req.app.get('io');
+      if (io) {
+        getPendingJoinRequests(roomId).then((requests) => {
+          io.to(roomId).emit('pending_requests_updated', {
+            roomId,
+            requestCount: requests.length,
+            requests
+          });
+          io.to(roomId).emit('new_join_request', {
+            roomId,
+            requestId: result.requestId,
+            sessionId: session.id,
+            displayName: session.display_name,
+            requestCount: requests.length
+          });
+        }).catch(() => {});
+      }
     }
 
     res.json({
@@ -367,6 +385,14 @@ router.post('/:roomId/requests/:requestId/approve', requireSession, requireRoomM
 
     const io = req.app.get('io');
     if (io) {
+      getPendingJoinRequests(roomId).then((requests) => {
+        io.to(roomId).emit('pending_requests_updated', {
+          roomId,
+          requestCount: requests.length,
+          requests
+        });
+      }).catch(() => {});
+
       getRoomParticipants(roomId).then((participants) => {
         io.to(roomId).emit('room_participants_updated', {
           roomId,
@@ -393,6 +419,18 @@ router.post('/:roomId/requests/:requestId/reject', requireSession, requireRoomMe
       `UPDATE join_requests SET status = 'rejected', reviewed_at = datetime('now'), reviewed_by = $1 WHERE id = $2 AND room_id = $3`,
       [req.session.id, requestId, roomId]
     );
+
+    const io = req.app.get('io');
+    if (io) {
+      getPendingJoinRequests(roomId).then((requests) => {
+        io.to(roomId).emit('pending_requests_updated', {
+          roomId,
+          requestCount: requests.length,
+          requests
+        });
+      }).catch(() => {});
+    }
+
     res.json({ success: true, message: 'Join request rejected.' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to reject request.' });
