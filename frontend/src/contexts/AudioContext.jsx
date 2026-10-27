@@ -13,8 +13,16 @@ const getRtcConfig = () => {
     { urls: 'stun:stun.cloudflare.com:3478' },
     { urls: 'stun:global.stun.twilio.com:3478' },
     { urls: 'stun:stun.services.mozilla.com' },
-    { urls: 'stun:stun.sipgate.net:3478' },
-    { urls: 'stun:stun.counterpath.com:3478' }
+    // Free high-availability OpenRelay TURN servers for symmetric NAT / 4G / 5G cellular / cross-network traversal
+    {
+      urls: [
+        'turn:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:443',
+        'turn:openrelay.metered.ca:443?transport=tcp'
+      ],
+      username: 'openrelay',
+      credential: 'openrelay'
+    }
   ];
 
   // Optional custom TURN relay configuration for strict enterprise or cellular networks
@@ -46,6 +54,8 @@ export function AudioCallProvider({ children }) {
   const [isListenerOnly, setIsListenerOnly] = useState(false);
   const [permissionError, setPermissionError] = useState(null);
   const [remotePeers, setRemotePeers] = useState({}); // socketId -> { displayName, isMuted, isSpeaking }
+  const [roomCallers, setRoomCallers] = useState([]);
+  const [roomCallCount, setRoomCallCount] = useState(0);
   const [hasRemoteAudioPlaying, setHasRemoteAudioPlaying] = useState(false);
 
   const localStreamRef = useRef(null);
@@ -54,6 +64,7 @@ export function AudioCallProvider({ children }) {
   const iceCandidateQueuesRef = useRef({}); // socketId -> Array<RTCIceCandidateInit>
   const audioOutputCtxRef = useRef(null); // Web Audio API AudioContext for direct sound playback
   const audioSourceNodesRef = useRef({}); // socketId -> MediaStreamAudioSourceNode
+  const audioGainNodesRef = useRef({}); // socketId -> GainNode (PRESERVED TO PREVENT V8 GARBAGE COLLECTION!)
   const isMutedRef = useRef(false);
   const currentRoomIdRef = useRef(null);
   const analyserIntervalRef = useRef(null);
@@ -96,6 +107,26 @@ export function AudioCallProvider({ children }) {
       window.removeEventListener('click', handleGestureUnlock);
       window.removeEventListener('touchstart', handleGestureUnlock);
       window.removeEventListener('keydown', handleGestureUnlock);
+    };
+  }, []);
+
+  // Global room-level authoritative call updates (syncs count before and during calls)
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleRoomAudioUpdate = ({ activeCallCount, activeCallers }) => {
+      if (typeof activeCallCount === 'number') {
+        setRoomCallCount(activeCallCount);
+      }
+      if (Array.isArray(activeCallers)) {
+        setRoomCallers(activeCallers);
+      }
+    };
+
+    socket.on('audio_participants_updated', handleRoomAudioUpdate);
+    return () => {
+      socket.off('audio_participants_updated', handleRoomAudioUpdate);
     };
   }, []);
 
@@ -143,6 +174,19 @@ export function AudioCallProvider({ children }) {
             };
           });
           return next;
+        });
+
+        // Mesh Fallback: If an existing peer has not initiated an offer to us after 2.5s,
+        // we proactively initiate an offer so bidirectional audio is guaranteed!
+        peers.forEach((p) => {
+          setTimeout(() => {
+            if (!peerConnectionsRef.current[p.socketId]) {
+              console.log('[WebRTC Audio] Mesh fallback: Initiating offer to existing peer:', p.displayName, p.socketId);
+              createPeerConnection(socket, p.socketId, true, roomId).catch((e) => {
+                console.warn('[WebRTC Audio] Mesh fallback connection error:', e);
+              });
+            }
+          }, 2500);
         });
       }
     });
@@ -340,7 +384,7 @@ export function AudioCallProvider({ children }) {
       event.track.enabled = true;
       setHasRemoteAudioPlaying(true);
 
-      // 1. PRIMARY: Web Audio API output pipeline (immune to HTMLMediaElement autoplay policy once unlocked)
+      // 1. PRIMARY: Web Audio API output pipeline with persistent gain node retention
       try {
         ensureAudioOutputUnlocked();
         const audioCtx = audioOutputCtxRef.current;
@@ -351,19 +395,26 @@ export function AudioCallProvider({ children }) {
           if (audioSourceNodesRef.current[remoteSocketId]) {
             try { audioSourceNodesRef.current[remoteSocketId].disconnect(); } catch (e) {}
           }
+          if (audioGainNodesRef.current[remoteSocketId]) {
+            try { audioGainNodesRef.current[remoteSocketId].disconnect(); } catch (e) {}
+          }
+
           const source = audioCtx.createMediaStreamSource(stream);
           const gainNode = audioCtx.createGain();
           gainNode.gain.value = 1.0;
           source.connect(gainNode);
           gainNode.connect(audioCtx.destination);
+
+          // RETAIN IN REF: Prevents browser V8 garbage collection from severing audio after ~15-30s!
           audioSourceNodesRef.current[remoteSocketId] = source;
-          console.log('[WebRTC Audio] Stream attached to Web Audio destination node for', remoteSocketId);
+          audioGainNodesRef.current[remoteSocketId] = gainNode;
+          console.log('[WebRTC Audio] Stream attached to Web Audio destination & protected from GC for', remoteSocketId);
         }
       } catch (err) {
         console.warn('[WebRTC Audio] Web Audio output attachment error:', err);
       }
 
-      // 2. SECONDARY: Managed <audio> element kept in layout tree (NOT display: none)
+      // 2. SECONDARY: Managed <audio> element kept in DOM with track unmuting listener
       let audioEl = remoteAudioElementsRef.current[remoteSocketId];
       if (!audioEl) {
         audioEl = document.createElement('audio');
@@ -384,6 +435,16 @@ export function AudioCallProvider({ children }) {
       }
       audioEl.srcObject = stream;
       audioEl.muted = false;
+
+      // When first RTP packets arrive across different networks / km away, guarantee playback
+      event.track.onunmute = () => {
+        console.log('[WebRTC Audio] Track unmuted (incoming network packets verified) for', remoteSocketId);
+        if (audioEl) audioEl.play().catch(() => {});
+        if (audioOutputCtxRef.current && audioOutputCtxRef.current.state === 'suspended') {
+          audioOutputCtxRef.current.resume().catch(() => {});
+        }
+      };
+
       audioEl.play().catch((err) => {
         console.warn('[WebRTC Audio] Autoplay deferred pending user gesture:', err);
       });
@@ -412,6 +473,12 @@ export function AudioCallProvider({ children }) {
         audioSourceNodesRef.current[socketId].disconnect();
       } catch (e) {}
       delete audioSourceNodesRef.current[socketId];
+    }
+    if (audioGainNodesRef.current[socketId]) {
+      try {
+        audioGainNodesRef.current[socketId].disconnect();
+      } catch (e) {}
+      delete audioGainNodesRef.current[socketId];
     }
     if (remoteAudioElementsRef.current[socketId]) {
       try {
@@ -641,7 +708,9 @@ export function AudioCallProvider({ children }) {
         isListenerOnly,
         permissionError,
         remotePeers,
-        peerCount: Object.keys(remotePeers).length + (inCall ? 1 : 0),
+        roomCallers,
+        activeRoomCallCount: roomCallCount,
+        peerCount: inCall ? (Object.keys(remotePeers).length + 1) : roomCallCount,
         hasRemoteAudioPlaying,
         startAudioCall,
         joinAsListener,

@@ -600,12 +600,12 @@ html {
 
 .mention-toast-header {
   font-size: 0.78rem;
-  color: var(--text-main);
+  color: #FFFFFF;
 }
 
 .mention-toast-text {
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.8);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -615,7 +615,7 @@ html {
 .mention-toast-close {
   background: transparent;
   border: none;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.65);
   cursor: pointer;
   font-size: 1.15rem;
   padding: 0 4px;
@@ -625,7 +625,30 @@ html {
 }
 
 .mention-toast-close:hover {
-  color: var(--text-main);
+  color: #FFFFFF;
+}
+
+/* Light Mode Overrides for Chat Mention Toast */
+[data-theme='light'] .chat-mention-toast {
+  background: #FFFFFF !important;
+  border: 1.5px solid #EF4444 !important;
+  box-shadow: 0 8px 30px rgba(239, 68, 68, 0.22), 0 2px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-theme='light'] .mention-toast-header {
+  color: #0F172A !important;
+}
+
+[data-theme='light'] .mention-toast-text {
+  color: #334155 !important;
+}
+
+[data-theme='light'] .mention-toast-close {
+  color: #64748B !important;
+}
+
+[data-theme='light'] .mention-toast-close:hover {
+  color: #0F172A !important;
 }
 
 /* Sidebar Drawer Panel (e.g. File Explorer, Chat, Files, Packages) */

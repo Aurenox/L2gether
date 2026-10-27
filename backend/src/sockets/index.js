@@ -43,6 +43,26 @@ export function setupSockets(io) {
   io.on('connection', (socket) => {
     const user = socket.user;
 
+    const broadcastAudioParticipants = (roomId) => {
+      if (!roomId) return;
+      const activeAudioUsers = [];
+      for (const [sId, usr] of socketUsers.entries()) {
+        if (usr.roomId === roomId && usr.inAudio) {
+          activeAudioUsers.push({
+            socketId: sId,
+            sessionId: usr.sessionId,
+            displayName: usr.displayName,
+            isMuted: Boolean(usr.isMuted)
+          });
+        }
+      }
+      io.to(roomId).emit('audio_participants_updated', {
+        roomId,
+        activeCallCount: activeAudioUsers.length,
+        activeCallers: activeAudioUsers
+      });
+    };
+
     // Join room
     socket.on('join_room', async ({ roomId }) => {
       if (!roomId) return;
@@ -137,6 +157,7 @@ export function setupSockets(io) {
         }
       }
       socket.emit('existing_audio_peers', { peers: audioPeers });
+      broadcastAudioParticipants(roomId);
 
       // Send existing collaborators' active files
       const collabs = [];
@@ -424,6 +445,8 @@ export function setupSockets(io) {
         sessionId: user.sessionId,
         displayName: user.displayName
       });
+
+      broadcastAudioParticipants(roomId);
     });
 
     socket.on('audio_leave', ({ roomId }) => {
@@ -437,6 +460,8 @@ export function setupSockets(io) {
         socketId: socket.id,
         sessionId: user.sessionId
       });
+
+      broadcastAudioParticipants(roomId);
     });
 
     socket.on('audio_offer', ({ targetSocketId, offer }) => {
@@ -625,6 +650,7 @@ export function setupSockets(io) {
             socketId: socket.id,
             sessionId: u.sessionId
           });
+          broadcastAudioParticipants(u.roomId);
         }
         socket.to(u.roomId).emit('user_active_file_cleared', {
           sessionId: u.sessionId

@@ -52,6 +52,7 @@ export default function RoomHeader({
     leaveAudioCall,
     toggleMute,
     peerCount,
+    activeRoomCallCount,
     hasRemoteAudioPlaying
   } = useAudioCall();
 
@@ -216,10 +217,11 @@ export default function RoomHeader({
             <button
               className="btn btn-primary btn-sm audio-join-btn"
               onClick={() => startAudioCall(room?.id)}
-              title="Join Live Voice Call"
+              title={activeRoomCallCount > 0 ? `Join Live Voice Call (${activeRoomCallCount} active in call)` : "Join Live Voice Call"}
             >
               <PhoneCall size={13} />
-              <span className="hide-on-mobile">Audio</span>
+              <span className="hide-on-mobile">{activeRoomCallCount > 0 ? `Audio (${activeRoomCallCount})` : 'Audio'}</span>
+              {activeRoomCallCount > 0 && <span className="show-on-mobile-inline">({activeRoomCallCount})</span>}
             </button>
           ) : (
             /* Desktop In-Header Bar (Hidden on small mobile where floating pill takes over) */
