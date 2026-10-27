@@ -9,6 +9,7 @@ import {
   joinRoom,
   getRoomParticipants,
   getPendingJoinRequests,
+  getAllJoinRequests,
   authenticateOwner,
   setRoomEditingLock
 } from '../services/roomService.js';
@@ -261,7 +262,11 @@ router.post('/:roomId/join', async (req, res) => {
       token = newSess.token;
     }
 
-    const result = await joinRoom({ roomId, sessionId: session.id });
+    const result = await joinRoom({
+      roomId,
+      sessionId: session.id,
+      reapply: Boolean(req.body?.reapply)
+    });
 
     if (result.status === 'not_found') {
       return res.status(404).json(result);
@@ -344,8 +349,10 @@ router.get('/:roomId/participants', requireSession, requireRoomMember, async (re
  */
 router.get('/:roomId/requests', requireSession, requireRoomMember, requireRoomOwner, async (req, res) => {
   try {
-    const requests = await getPendingJoinRequests(req.params.roomId);
-    res.json({ requests });
+    const all = await getAllJoinRequests(req.params.roomId);
+    const requests = all.filter(r => r.status === 'pending');
+    const rejected = all.filter(r => r.status === 'rejected');
+    res.json({ requests, rejected });
   } catch (err) {
     res.status(500).json({ error: 'Failed to retrieve join requests.' });
   }

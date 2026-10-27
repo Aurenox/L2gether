@@ -113,6 +113,37 @@ export default function JoinRoomPage() {
     }
   };
 
+  const handleReapply = async () => {
+    const cleanRoomId = extractRoomId(roomInput);
+    if (!cleanRoomId) {
+      setError('Please enter a valid room ID or invitation link.');
+      return;
+    }
+    if (!displayName.trim()) {
+      setError('Please enter a display name.');
+      return;
+    }
+
+    try {
+      setIsJoining(true);
+      setError(null);
+      const res = await api.joinRoom(cleanRoomId, displayName.trim(), { reapply: true });
+      if (res.session) {
+        setSessionData(res.session);
+      }
+      if (res.status === 'joined') {
+        navigate(`/room/${cleanRoomId}`);
+      } else if (res.status === 'pending') {
+        setIsPendingApproval(true);
+        setActivePollRoomId(cleanRoomId);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to re-submit join request.');
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
   // Poll for owner approval if in pending state
   useEffect(() => {
     if (!isPendingApproval || !activePollRoomId) return;
@@ -176,8 +207,38 @@ export default function JoinRoomPage() {
               </div>
 
               {error && (
-                <div style={{ padding: '0.75rem 1rem', backgroundColor: 'var(--state-error-bg)', color: 'var(--state-error)', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
-                  {error}
+                <div
+                  style={{
+                    padding: '0.85rem 1rem',
+                    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: 'var(--state-error)',
+                    borderRadius: 'var(--radius-sm)',
+                    marginBottom: '1.5rem',
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                    <span>{error}</span>
+                  </div>
+                  {error.toLowerCase().includes('rejected') && (
+                    <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                      <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        If this was done in error or the host is ready to admit you, click below to re-submit your join request:
+                      </p>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={handleReapply}
+                        disabled={isJoining}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                      >
+                        <Shield size={13} />
+                        <span>{isJoining ? 'Submitting...' : 'Request Access Again'}</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 

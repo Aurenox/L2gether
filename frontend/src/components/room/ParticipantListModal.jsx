@@ -13,6 +13,7 @@ export default function ParticipantListModal({
 }) {
   const [participants, setParticipants] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [rejectedRequests, setRejectedRequests] = useState([]);
   const [activeTab, setActiveTab] = useState(
     isOwner && pendingRequestCount > 0 ? 'requests' : 'members'
   );
@@ -26,6 +27,7 @@ export default function ParticipantListModal({
         const rRes = await api.getPendingRequests(roomId);
         const reqList = rRes.requests || [];
         setRequests(reqList);
+        setRejectedRequests(rRes.rejected || []);
         if (onPendingCountChange) {
           onPendingCountChange(reqList.length);
         }
@@ -227,6 +229,50 @@ export default function ParticipantListModal({
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Previously Rejected Requests with Instant Un-reject / Approve */}
+              {rejectedRequests.length > 0 && (
+                <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Previously Rejected ({rejectedRequests.length})
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {rejectedRequests.map((r) => (
+                      <div
+                        key={r.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '0.55rem 0.85rem',
+                          backgroundColor: 'var(--bg-main)',
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1px dashed rgba(239, 68, 68, 0.35)'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                            {r.display_name}
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--state-error)' }}>
+                            Status: Rejected
+                          </div>
+                        </div>
+
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => handleApprove(r.id)}
+                          title="Un-reject and admit user directly to workspace"
+                          style={{ fontSize: '0.75rem', padding: '3px 8px', gap: '4px' }}
+                        >
+                          <Check size={13} />
+                          <span>Approve &amp; Admit</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

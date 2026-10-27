@@ -81,11 +81,11 @@ export const api = {
     return handleResponse(res);
   },
 
-  joinRoom: async (roomId, displayName) => {
+  joinRoom: async (roomId, displayName, options = {}) => {
     const res = await fetch(`${API_BASE}/rooms/${roomId}/join`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ displayName })
+      body: JSON.stringify({ displayName, ...options })
     });
     return handleResponse(res);
   },

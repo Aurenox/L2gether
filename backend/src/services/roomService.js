@@ -293,7 +293,7 @@ export async function getRoomDetails(roomId, currentSessionId = null) {
 /**
  * Handles participant joining
  */
-export async function joinRoom({ roomId, sessionId }) {
+export async function joinRoom({ roomId, sessionId, reapply = false }) {
   const room = await getRoomDetails(roomId, sessionId);
   if (!room) {
     return { status: 'not_found', error: 'Room does not exist.' };
@@ -353,7 +353,22 @@ export async function joinRoom({ roomId, sessionId }) {
       );
       return { status: 'joined', role: 'participant', room };
     } else if (reqStatus === 'rejected') {
-      return { status: 'rejected', error: 'Your request to join this private room was rejected by the owner.' };
+      if (reapply) {
+        await db.query(
+          `UPDATE join_requests SET status = 'pending', reviewed_at = NULL, reviewed_by = NULL, created_at = datetime('now') WHERE id = $1`,
+          [existingReq.rows[0].id]
+        );
+        return {
+          status: 'pending',
+          message: 'Join request re-sent to the room owner for approval.',
+          requestId: existingReq.rows[0].id
+        };
+      }
+      return {
+        status: 'rejected',
+        canReapply: true,
+        error: 'Your request to join this private room was rejected by the owner.'
+      };
     } else {
       return { status: 'pending', message: 'Join request is pending approval by the room owner.' };
     }
@@ -399,6 +414,21 @@ export async function getPendingJoinRequests(roomId) {
      JOIN guest_sessions gs ON jr.session_id = gs.id
      WHERE jr.room_id = $1 AND jr.status = 'pending'
      ORDER BY jr.created_at ASC`,
+    [roomId]
+  );
+  return rows;
+}
+
+/**
+ * List all join requests including rejected (for room owner management)
+ */
+export async function getAllJoinRequests(roomId) {
+  const { rows } = await db.query(
+    `SELECT jr.id, jr.session_id, jr.status, jr.created_at, jr.reviewed_at, gs.display_name
+     FROM join_requests jr
+     JOIN guest_sessions gs ON jr.session_id = gs.id
+     WHERE jr.room_id = $1
+     ORDER BY (jr.status = 'pending') DESC, jr.created_at DESC`,
     [roomId]
   );
   return rows;
