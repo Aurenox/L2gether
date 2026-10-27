@@ -27,7 +27,8 @@ import {
   PenTool,
   User,
   HelpCircle,
-  X
+  X,
+  Mail
 } from 'lucide-react';
 import WhiteboardModal from '../components/whiteboard/WhiteboardModal';
 import RoomHeader from '../components/navigation/RoomHeader';
@@ -36,6 +37,8 @@ import ShareQRModal from '../components/room/ShareQRModal';
 import ParticipantListModal from '../components/room/ParticipantListModal';
 import RoomSettingsModal from '../components/room/RoomSettingsModal';
 import TemplatePickerModal from '../components/templates/TemplatePickerModal';
+import AudioEchoHelpModal from '../components/audio/AudioEchoHelpModal';
+import FirstTimeUserGuideModal from '../components/common/FirstTimeUserGuideModal';
 import FileExplorer from '../components/editor/FileExplorer';
 import TabBar from '../components/editor/TabBar';
 import MonacoEditorWrapper from '../components/editor/MonacoEditorWrapper';
@@ -249,6 +252,8 @@ export default function RoomWorkspacePage() {
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [showAudioHelpModal, setShowAudioHelpModal] = useState(false);
+  const [showGuideModal, setShowGuideModal] = useState(false);
   const [showCreatorPopup, setShowCreatorPopup] = useState(false);
   const [isCreatorSticky, setIsCreatorSticky] = useState(false);
   const creatorTimerRef = useRef(null);
@@ -1132,6 +1137,8 @@ export default function RoomWorkspacePage() {
         onOpenSettings={() => setShowSettingsModal(true)}
         autoFollowHost={autoFollowHost}
         onToggleAutoFollow={() => setAutoFollowHost(v => !v)}
+        onOpenAudioHelp={() => setShowAudioHelpModal(true)}
+        onOpenGuide={() => setShowGuideModal(true)}
       />
 
       {/* Temporary Floating Lock Notification */}
@@ -1333,6 +1340,32 @@ export default function RoomWorkspacePage() {
                     <span>LinkedIn: Saurav B</span>
                   </a>
                 </div>
+
+                <div className="nav-creator-bug-report" style={{ marginTop: '8px' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.78rem' }}>
+                    <span>🐞</span>
+                    <span>Report Bugs &amp; Suggestions</span>
+                  </div>
+                  <a
+                    href="mailto:saurav04atg@gmail.com?subject=L2gether%20Bug%20Report%20%2F%20Feature%20Request"
+                    className="btn btn-secondary btn-sm"
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '5px',
+                      fontSize: '0.74rem',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      boxSizing: 'border-box',
+                      padding: '4px 8px'
+                    }}
+                  >
+                    <Mail size={12} />
+                    <span>saurav04atg@gmail.com</span>
+                  </a>
+                </div>
               </div>
             )}
           </div>
@@ -1346,6 +1379,8 @@ export default function RoomWorkspacePage() {
             onNavigateTab={(tab) => setActiveTab(tab)}
             onOpenQR={() => setShowQRModal(true)}
             onOpenParticipants={() => setShowParticipantsModal(true)}
+            onOpenAudioHelp={() => setShowAudioHelpModal(true)}
+            onOpenGuide={() => setShowGuideModal(true)}
           />
         )}
 
@@ -1780,6 +1815,19 @@ export default function RoomWorkspacePage() {
           onClose={() => setShowTemplatePicker(false)}
         />
       )}
+
+      {/* Audio Echo Quality & Prevention Help Modal */}
+      <AudioEchoHelpModal
+        isOpen={showAudioHelpModal}
+        onClose={() => setShowAudioHelpModal(false)}
+      />
+
+      {/* First-Time User Guide & Workspace Help Modal */}
+      <FirstTimeUserGuideModal
+        isOpen={showGuideModal}
+        onClose={() => setShowGuideModal(false)}
+        onOpenAudioHelp={() => setShowAudioHelpModal(true)}
+      />
 
       {/* Floating Call Widget on Mobile */}
       <MobileAudioCallBar roomId={roomId} />

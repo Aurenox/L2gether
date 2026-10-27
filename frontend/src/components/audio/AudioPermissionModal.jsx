@@ -168,6 +168,14 @@ export default function AudioPermissionModal() {
           </div>
         )}
 
+        {/* Audio Echo Tip Banner */}
+        <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Headphones size={15} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+            <strong>Audio Tip:</strong> When collaborating in the same physical room, wear headphones to eliminate echo feedback between nearby microphones and speakers.
+          </span>
+        </div>
+
         {/* Footer Actions */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
           <button

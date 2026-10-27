@@ -21,7 +21,8 @@ import {
   Volume2,
   Menu,
   X,
-  LogOut
+  LogOut,
+  HelpCircle
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAudioCall } from '../../contexts/AudioContext';
@@ -37,7 +38,9 @@ export default function RoomHeader({
   onOpenParticipants,
   onOpenSettings,
   autoFollowHost,
-  onToggleAutoFollow
+  onToggleAutoFollow,
+  onOpenAudioHelp,
+  onOpenGuide
 }) {
   const { themeSetting, setThemeSetting } = useTheme();
   const {
@@ -208,45 +211,60 @@ export default function RoomHeader({
         </button>
 
         {/* WebRTC Audio Call Controls */}
-        {!inCall ? (
-          <button
-            className="btn btn-primary btn-sm audio-join-btn"
-            onClick={() => startAudioCall(room?.id)}
-            title="Join Live Voice Call"
-          >
-            <PhoneCall size={13} />
-            <span className="hide-on-mobile">Audio</span>
-          </button>
-        ) : (
-          /* Desktop In-Header Bar (Hidden on small mobile where floating pill takes over) */
-          <div className="audio-call-bar hide-on-mobile">
-            <div
-              className={`badge badge-success ${isSpeaking ? 'speaking-active' : ''}`}
-              style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 6px' }}
-              title={isSpeaking ? 'Microphone active / speaking' : isListenerOnly ? 'Listening' : 'Connected to audio'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+          {!inCall ? (
+            <button
+              className="btn btn-primary btn-sm audio-join-btn"
+              onClick={() => startAudioCall(room?.id)}
+              title="Join Live Voice Call"
             >
-              {isListenerOnly ? <Headphones size={11} /> : <Radio size={11} />}
-              <span style={{ fontSize: '0.72rem' }}>{peerCount}</span>
-              {hasRemoteAudioPlaying && <Volume2 size={11} color="#34d399" title="Sound is active" />}
+              <PhoneCall size={13} />
+              <span className="hide-on-mobile">Audio</span>
+            </button>
+          ) : (
+            /* Desktop In-Header Bar (Hidden on small mobile where floating pill takes over) */
+            <div className="audio-call-bar hide-on-mobile">
+              <div
+                className={`badge badge-success ${isSpeaking ? 'speaking-active' : ''}`}
+                style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 6px' }}
+                title={isSpeaking ? 'Microphone active / speaking' : isListenerOnly ? 'Listening' : 'Connected to audio'}
+              >
+                {isListenerOnly ? <Headphones size={11} /> : <Radio size={11} />}
+                <span style={{ fontSize: '0.72rem' }}>{peerCount}</span>
+                {hasRemoteAudioPlaying && <Volume2 size={11} color="#34d399" title="Sound is active" />}
+              </div>
+
+              <button
+                className={`btn-icon sm ${isMuted ? 'btn-danger' : 'btn-secondary'}`}
+                onClick={() => toggleMute(room?.id)}
+                title={isListenerOnly ? 'Click to enable microphone' : isMuted ? 'Unmute microphone' : 'Mute microphone'}
+              >
+                {isMuted ? <MicOff size={13} /> : <Mic size={13} />}
+              </button>
+
+              <button
+                className="btn btn-danger btn-icon sm"
+                onClick={() => leaveAudioCall(room?.id)}
+                title="Leave Voice Call"
+              >
+                <PhoneOff size={13} />
+              </button>
             </div>
+          )}
 
+          {/* Audio Quality & Echo Guide Button */}
+          {onOpenAudioHelp && (
             <button
-              className={`btn-icon sm ${isMuted ? 'btn-danger' : 'btn-secondary'}`}
-              onClick={() => toggleMute(room?.id)}
-              title={isListenerOnly ? 'Click to enable microphone' : isMuted ? 'Unmute microphone' : 'Mute microphone'}
+              className="btn btn-subtle btn-icon sm hide-on-mobile"
+              onClick={onOpenAudioHelp}
+              title="Audio Quality & Echo Prevention Guide (Headphones recommended for same-room devices)"
+              aria-label="Audio Quality Guide"
+              style={{ color: 'var(--accent-primary)' }}
             >
-              {isMuted ? <MicOff size={13} /> : <Mic size={13} />}
+              <Headphones size={14} />
             </button>
-
-            <button
-              className="btn btn-danger btn-icon sm"
-              onClick={() => leaveAudioCall(room?.id)}
-              title="Leave Voice Call"
-            >
-              <PhoneOff size={13} />
-            </button>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Theme Selector (Desktop / Tablet) */}
         <div className="header-theme-toggle hide-on-mobile" style={{ display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', padding: '2px', border: '1px solid var(--border-color)' }}>
@@ -267,6 +285,18 @@ export default function RoomHeader({
         >
           <Settings size={15} />
         </button>
+
+        {/* First-Time User Guide & Workspace Help button */}
+        {onOpenGuide && (
+          <button
+            className="btn btn-subtle btn-icon sm hide-on-mobile"
+            onClick={onOpenGuide}
+            title="First-Time User Guide & Workspace Help"
+            aria-label="First-Time User Guide"
+          >
+            <HelpCircle size={15} />
+          </button>
+        )}
 
         {/* Leave Workspace Button (Desktop) */}
         <button
@@ -373,6 +403,32 @@ export default function RoomHeader({
                 <Settings size={16} />
                 <span>Workspace Settings</span>
               </button>
+
+              {onOpenAudioHelp && (
+                <button
+                  className="mobile-header-menu-btn"
+                  onClick={() => {
+                    onOpenAudioHelp();
+                    setShowMobileMore(false);
+                  }}
+                >
+                  <Headphones size={16} color="var(--accent-primary)" />
+                  <span>Audio &amp; Echo Guide</span>
+                </button>
+              )}
+
+              {onOpenGuide && (
+                <button
+                  className="mobile-header-menu-btn"
+                  onClick={() => {
+                    onOpenGuide();
+                    setShowMobileMore(false);
+                  }}
+                >
+                  <HelpCircle size={16} color="var(--accent-secondary)" />
+                  <span>First-Time User Guide</span>
+                </button>
+              )}
 
               <button
                 className="mobile-header-menu-btn"

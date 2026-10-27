@@ -144,7 +144,7 @@ export default function Navbar() {
 
             {showCreatorPopup && (
               <div
-                className="activity-creator-popover nav-creator-popover"
+                className="nav-creator-popover"
                 onClick={(e) => e.stopPropagation()}
                 onMouseEnter={handleCreatorMouseEnter}
                 onMouseLeave={handleCreatorMouseLeave}
@@ -200,25 +200,31 @@ export default function Navbar() {
                 </div>
 
                 <div className="nav-creator-bug-report">
-                  <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
                     <span>🐞</span>
                     <span>Report Bugs &amp; Suggest Features</span>
                   </div>
-                  <p style={{ margin: 0, fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                    Encountered an issue or have ideas? Contact me directly via Gmail:
+                  <p style={{ margin: '0 0 8px 0', fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                    Encountered an issue or have ideas? Reach out directly via Gmail:
                   </p>
                   <a
                     href="mailto:saurav04atg@gmail.com?subject=L2gether%20Bug%20Report%20%2F%20Feature%20Request"
+                    className="btn btn-secondary btn-sm"
                     style={{
-                      color: 'var(--accent-primary)',
-                      fontSize: '0.78rem',
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      fontSize: '0.76rem',
                       fontWeight: 600,
                       textDecoration: 'none',
-                      display: 'inline-block',
-                      marginTop: '4px'
+                      boxSizing: 'border-box',
+                      padding: '6px 10px'
                     }}
                   >
-                    saurav04atg@gmail.com &rarr;
+                    <Mail size={13} />
+                    <span>saurav04atg@gmail.com</span>
                   </a>
                 </div>
               </div>
@@ -363,25 +369,31 @@ export default function Navbar() {
             </div>
 
             <div className="nav-creator-bug-report">
-              <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
                 <span>🐞</span>
                 <span>Report Bugs &amp; Suggest Features</span>
               </div>
-              <p style={{ margin: 0, fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+              <p style={{ margin: '0 0 8px 0', fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
                 Encountered an issue or have ideas? Reach out directly via Gmail:
               </p>
               <a
                 href="mailto:saurav04atg@gmail.com?subject=L2gether%20Bug%20Report%20%2F%20Feature%20Request"
+                className="btn btn-secondary btn-sm"
                 style={{
-                  color: 'var(--accent-primary)',
-                  fontSize: '0.78rem',
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  fontSize: '0.76rem',
                   fontWeight: 600,
                   textDecoration: 'none',
-                  display: 'inline-block',
-                  marginTop: '4px'
+                  boxSizing: 'border-box',
+                  padding: '6px 10px'
                 }}
               >
-                saurav04atg@gmail.com &rarr;
+                <Mail size={13} />
+                <span>saurav04atg@gmail.com</span>
               </a>
             </div>
           </div>
@@ -504,8 +516,30 @@ export default function Navbar() {
                   </a>
                 </div>
 
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  🐞 Report bugs or suggest features via Gmail: <a href="mailto:saurav04atg@gmail.com?subject=L2gether%20Bug%20Report%20%2F%20Feature%20Request" style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>saurav04atg@gmail.com</a>
+                <div className="nav-creator-bug-report" style={{ marginTop: '4px' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem' }}>
+                    <span>🐞</span>
+                    <span>Report Bugs &amp; Suggest Features</span>
+                  </div>
+                  <a
+                    href="mailto:saurav04atg@gmail.com?subject=L2gether%20Bug%20Report%20%2F%20Feature%20Request"
+                    className="btn btn-secondary btn-sm"
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      boxSizing: 'border-box',
+                      padding: '5px 8px'
+                    }}
+                  >
+                    <Mail size={12} />
+                    <span>saurav04atg@gmail.com</span>
+                  </a>
                 </div>
               </div>
 
