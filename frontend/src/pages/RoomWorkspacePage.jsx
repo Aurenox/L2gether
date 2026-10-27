@@ -742,6 +742,32 @@ export default function RoomWorkspacePage() {
     };
   }, [roomId, navigate, session?.token]);
 
+  // Periodic background check to ensure pending requests count is always up to date
+  useEffect(() => {
+    if (!roomId) return;
+    let isMounted = true;
+    const syncRequests = async () => {
+      try {
+        const res = await api.getPendingRequests(roomId);
+        if (isMounted && res?.requests) {
+          setPendingRequestCount(res.requests.length);
+        }
+      } catch (e) {
+        // Not owner or non-member, ignore
+      }
+    };
+
+    syncRequests();
+    const interval = setInterval(syncRequests, 3500);
+    window.addEventListener('focus', syncRequests);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener('focus', syncRequests);
+    };
+  }, [roomId]);
+
   // Toggle lock for a specific file (owner only)
   const handleToggleFileLock = async (targetPath = activeFilePath, lockState) => {
     if (!room?.isOwner || !targetPath) return;
@@ -1297,11 +1323,11 @@ export default function RoomWorkspacePage() {
           <button
             className="activity-tab-btn"
             onClick={() => setShowParticipantsModal(true)}
-            title={room?.isOwner && pendingRequestCount > 0 ? `${pendingRequestCount} pending join request(s)` : "Participants & Join Requests"}
+            title={pendingRequestCount > 0 ? `${pendingRequestCount} pending join request(s)` : "Participants & Join Requests"}
             style={{ position: 'relative' }}
           >
             <Users size={18} />
-            {room?.isOwner && pendingRequestCount > 0 && (
+            {pendingRequestCount > 0 && (
               <span
                 className="pending-requests-badge"
                 title={`${pendingRequestCount} pending join request(s)`}

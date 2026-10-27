@@ -248,9 +248,13 @@ export async function getRoomDetails(roomId, currentSessionId = null) {
     }
   }
 
+  const isOwner = Boolean(
+    currentSessionId && (currentSessionId === room.owner_session_id || userRole === 'owner')
+  );
+
   // Count pending join requests if user is owner
   let pendingRequestCount = 0;
-  if (currentSessionId && currentSessionId === room.owner_session_id) {
+  if (isOwner) {
     try {
       const pendingRes = await db.query(
         `SELECT COUNT(*) as count FROM join_requests WHERE room_id = $1 AND status = 'pending'`,
@@ -279,7 +283,7 @@ export async function getRoomDetails(roomId, currentSessionId = null) {
     isExpired,
     ownerName: room.owner_name,
     ownerSessionId: room.owner_session_id,
-    isOwner: currentSessionId === room.owner_session_id,
+    isOwner,
     participantCount: Math.max(participantCount, participants.length),
     maxParticipants: room.max_participants || 25,
     participants,

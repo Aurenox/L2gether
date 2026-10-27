@@ -23,14 +23,16 @@ export default function ParticipantListModal({
       const pRes = await api.getParticipants(roomId);
       setParticipants(pRes.participants || []);
 
-      if (isOwner) {
-        const rRes = await api.getPendingRequests(roomId);
-        const reqList = rRes.requests || [];
-        setRequests(reqList);
-        setRejectedRequests(rRes.rejected || []);
-        if (onPendingCountChange) {
-          onPendingCountChange(reqList.length);
-        }
+      if (isOwner || pendingRequestCount > 0) {
+        try {
+          const rRes = await api.getPendingRequests(roomId);
+          const reqList = rRes.requests || [];
+          setRequests(reqList);
+          setRejectedRequests(rRes.rejected || []);
+          if (onPendingCountChange) {
+            onPendingCountChange(reqList.length);
+          }
+        } catch (err) {}
       }
     } catch (e) {
       console.error('Failed to load participants:', e);
@@ -82,7 +84,7 @@ export default function ParticipantListModal({
           </button>
         </div>
 
-        {isOwner && (
+        {(isOwner || requests.length > 0 || rejectedRequests.length > 0) && (
           <div style={{ display: 'flex', padding: '0.5rem 1rem', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', gap: '0.5rem' }}>
             <button
               className={`btn btn-sm ${activeTab === 'members' ? 'btn-primary' : 'btn-secondary'}`}

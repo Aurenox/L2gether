@@ -210,14 +210,14 @@ export default function RoomHeader({
           onClick={onOpenParticipants}
           style={{ position: 'relative' }}
           title={
-            room?.isOwner && pendingRequestCount > 0
+            pendingRequestCount > 0
               ? `${pendingRequestCount} pending join request(s) awaiting approval`
               : "Active Participants"
           }
         >
           <Users size={14} />
           <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{participantCount || room?.participantCount || 1}</span>
-          {room?.isOwner && pendingRequestCount > 0 && (
+          {pendingRequestCount > 0 && (
             <span
               className="pending-requests-badge"
               title={`${pendingRequestCount} pending join request(s)`}
@@ -348,7 +348,7 @@ export default function RoomHeader({
           style={{ position: 'relative' }}
         >
           <Menu size={18} />
-          {room?.isOwner && pendingRequestCount > 0 && (
+          {pendingRequestCount > 0 && (
             <span
               className="pending-requests-badge"
               style={{ top: '-4px', right: '-4px' }}
@@ -394,7 +394,7 @@ export default function RoomHeader({
               >
                 <Users size={16} />
                 <span>Participants ({participantCount || room?.participantCount || 1})</span>
-                {room?.isOwner && pendingRequestCount > 0 && (
+                {pendingRequestCount > 0 && (
                   <span
                     className="pending-requests-badge"
                     style={{ position: 'static', marginLeft: 'auto' }}

@@ -239,10 +239,10 @@ export default function RoomOverview({
               className="btn btn-subtle btn-sm"
               onClick={onOpenParticipants}
               style={{ fontSize: '0.72rem', padding: '2px 6px', position: 'relative' }}
-              title={room?.isOwner && pendingRequestCount > 0 ? `${pendingRequestCount} pending join request(s)` : undefined}
+              title={pendingRequestCount > 0 ? `${pendingRequestCount} pending join request(s)` : undefined}
             >
               <span>View All ({participantCount || room?.participantCount || 1})</span>
-              {room?.isOwner && pendingRequestCount > 0 && (
+              {pendingRequestCount > 0 && (
                 <span
                   className="pending-requests-badge"
                   style={{ top: '-4px', right: '-4px' }}

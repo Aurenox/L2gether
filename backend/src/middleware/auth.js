@@ -119,7 +119,7 @@ export async function requireRoomMember(req, res, next) {
 
     req.room = room;
     req.membership = memberResult.rows[0];
-    req.isOwner = room.owner_session_id === req.session.id;
+    req.isOwner = room.owner_session_id === req.session.id || memberResult.rows[0]?.role === 'owner';
 
     next();
   } catch (err) {

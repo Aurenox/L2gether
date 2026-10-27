@@ -1898,6 +1898,11 @@ html {
   z-index: 10;
 }
 
+.activity-tab-btn .pending-requests-badge {
+  top: 2px;
+  right: 2px;
+}
+
 @keyframes pendingPulse {
   0% {
     transform: scale(0.95);

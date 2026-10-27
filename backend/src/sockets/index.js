@@ -98,15 +98,15 @@ export function setupSockets(io) {
       }
 
       const ownerSessionId = roomRows[0]?.owner_session_id;
-      const isOwner = ownerSessionId === user.sessionId;
+      const { rows: memRows } = await db.query(
+        `SELECT role, revoked_at FROM room_memberships WHERE room_id = $1 AND session_id = $2`,
+        [roomId, user.sessionId]
+      );
+      const isOwner = ownerSessionId === user.sessionId || (memRows.length > 0 && memRows[0].role === 'owner');
       const isPublic = roomRows[0]?.visibility === 'public';
 
       // Ensure user is either room owner or approved member before joining socket room
       if (!isOwner) {
-        const { rows: memRows } = await db.query(
-          `SELECT role, revoked_at FROM room_memberships WHERE room_id = $1 AND session_id = $2`,
-          [roomId, user.sessionId]
-        );
         const hasActiveMembership = memRows.length > 0 && !memRows[0].revoked_at;
 
         if (!hasActiveMembership) {
