@@ -11,6 +11,40 @@ import {
 // Map of active sockets: socketId -> { sessionId, displayName, roomId, inAudio }
 const socketUsers = new Map();
 
+// Authoritative broadcaster for voice call participant state (deduplicated by session)
+function broadcastAudioParticipants(io, roomId) {
+  if (!roomId) return;
+  const activeAudioUsers = [];
+  const seenSessions = new Set();
+
+  for (const [sId, usr] of socketUsers.entries()) {
+    // Check if socket is still live and connected
+    const liveSocket = io.sockets.sockets?.get(sId);
+    if (!liveSocket || !liveSocket.connected) {
+      socketUsers.delete(sId);
+      continue;
+    }
+
+    if (usr.roomId === roomId && usr.inAudio) {
+      if (!seenSessions.has(usr.sessionId)) {
+        seenSessions.add(usr.sessionId);
+        activeAudioUsers.push({
+          socketId: sId,
+          sessionId: usr.sessionId,
+          displayName: usr.displayName,
+          isMuted: Boolean(usr.isMuted)
+        });
+      }
+    }
+  }
+
+  io.to(roomId).emit('audio_participants_updated', {
+    roomId,
+    activeCallCount: activeAudioUsers.length,
+    activeCallers: activeAudioUsers
+  });
+}
+
 export function setupSockets(io) {
   io.use(async (socket, next) => {
     try {
@@ -42,26 +76,6 @@ export function setupSockets(io) {
 
   io.on('connection', (socket) => {
     const user = socket.user;
-
-    const broadcastAudioParticipants = (roomId) => {
-      if (!roomId) return;
-      const activeAudioUsers = [];
-      for (const [sId, usr] of socketUsers.entries()) {
-        if (usr.roomId === roomId && usr.inAudio) {
-          activeAudioUsers.push({
-            socketId: sId,
-            sessionId: usr.sessionId,
-            displayName: usr.displayName,
-            isMuted: Boolean(usr.isMuted)
-          });
-        }
-      }
-      io.to(roomId).emit('audio_participants_updated', {
-        roomId,
-        activeCallCount: activeAudioUsers.length,
-        activeCallers: activeAudioUsers
-      });
-    };
 
     // Join room
     socket.on('join_room', async ({ roomId }) => {
@@ -146,18 +160,27 @@ export function setupSockets(io) {
 
       // Send active audio participants in room to the newly joined client
       const audioPeers = [];
+      const seenAudioSessions = new Set();
       for (const [sId, u] of socketUsers.entries()) {
+        const liveSocket = io.sockets.sockets?.get(sId);
+        if (!liveSocket || !liveSocket.connected) {
+          socketUsers.delete(sId);
+          continue;
+        }
         if (u.roomId === roomId && u.inAudio && sId !== socket.id) {
-          audioPeers.push({
-            socketId: sId,
-            sessionId: u.sessionId,
-            displayName: u.displayName,
-            isMuted: u.isMuted
-          });
+          if (!seenAudioSessions.has(u.sessionId)) {
+            seenAudioSessions.add(u.sessionId);
+            audioPeers.push({
+              socketId: sId,
+              sessionId: u.sessionId,
+              displayName: u.displayName,
+              isMuted: u.isMuted
+            });
+          }
         }
       }
       socket.emit('existing_audio_peers', { peers: audioPeers });
-      broadcastAudioParticipants(roomId);
+      broadcastAudioParticipants(io, roomId);
 
       // Send existing collaborators' active files
       const collabs = [];
@@ -422,19 +445,36 @@ export function setupSockets(io) {
       const u = socketUsers.get(socket.id);
       if (!u || u.roomId !== roomId) return;
 
+      // In case another socket exists for this user session with inAudio = true, reset it
+      for (const [sId, usr] of socketUsers.entries()) {
+        if (sId !== socket.id && usr.sessionId === user.sessionId && usr.roomId === roomId) {
+          usr.inAudio = false;
+        }
+      }
+
       u.inAudio = true;
       u.isMuted = false;
 
       // Send the newly joined participant the list of peers already in audio in this room
       const existingPeers = [];
+      const seenAudioSessions = new Set();
       for (const [sId, usr] of socketUsers.entries()) {
+        const liveSocket = io.sockets.sockets?.get(sId);
+        if (!liveSocket || !liveSocket.connected) {
+          socketUsers.delete(sId);
+          continue;
+        }
+
         if (usr.roomId === roomId && usr.inAudio && sId !== socket.id) {
-          existingPeers.push({
-            socketId: sId,
-            sessionId: usr.sessionId,
-            displayName: usr.displayName,
-            isMuted: usr.isMuted
-          });
+          if (!seenAudioSessions.has(usr.sessionId)) {
+            seenAudioSessions.add(usr.sessionId);
+            existingPeers.push({
+              socketId: sId,
+              sessionId: usr.sessionId,
+              displayName: usr.displayName,
+              isMuted: Boolean(usr.isMuted)
+            });
+          }
         }
       }
       socket.emit('existing_audio_participants', { peers: existingPeers });
@@ -446,22 +486,28 @@ export function setupSockets(io) {
         displayName: user.displayName
       });
 
-      broadcastAudioParticipants(roomId);
+      broadcastAudioParticipants(io, roomId);
     });
 
     socket.on('audio_leave', ({ roomId }) => {
       if (!roomId) return;
       const u = socketUsers.get(socket.id);
-      if (!u || u.roomId !== roomId) return;
-
-      u.inAudio = false;
+      if (u) {
+        u.inAudio = false;
+      }
 
       socket.to(roomId).emit('peer_left_audio', {
         socketId: socket.id,
         sessionId: user.sessionId
       });
 
-      broadcastAudioParticipants(roomId);
+      broadcastAudioParticipants(io, roomId);
+    });
+
+    // On-demand authoritative sync for callers
+    socket.on('audio_sync_request', ({ roomId }) => {
+      if (!roomId) return;
+      broadcastAudioParticipants(io, roomId);
     });
 
     socket.on('audio_offer', ({ targetSocketId, offer }) => {
@@ -644,13 +690,16 @@ export function setupSockets(io) {
     socket.on('disconnect', () => {
       stopInteractiveSession(socket.id);
       const u = socketUsers.get(socket.id);
+      // Remove socket from map immediately so that counts do NOT include leaving socket
+      socketUsers.delete(socket.id);
+
       if (u && u.roomId) {
         if (u.inAudio) {
           socket.to(u.roomId).emit('peer_left_audio', {
             socketId: socket.id,
             sessionId: u.sessionId
           });
-          broadcastAudioParticipants(u.roomId);
+          broadcastAudioParticipants(io, u.roomId);
         }
         socket.to(u.roomId).emit('user_active_file_cleared', {
           sessionId: u.sessionId
@@ -679,7 +728,6 @@ export function setupSockets(io) {
           });
         });
       }
-      socketUsers.delete(socket.id);
     });
   });
 }

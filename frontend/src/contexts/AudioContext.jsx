@@ -10,19 +10,7 @@ const getRtcConfig = () => {
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun3.l.google.com:19302' },
     { urls: 'stun:stun4.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' },
-    { urls: 'stun:global.stun.twilio.com:3478' },
-    { urls: 'stun:stun.services.mozilla.com' },
-    // Free high-availability OpenRelay TURN servers for symmetric NAT / 4G / 5G cellular / cross-network traversal
-    {
-      urls: [
-        'turn:openrelay.metered.ca:80',
-        'turn:openrelay.metered.ca:443',
-        'turn:openrelay.metered.ca:443?transport=tcp'
-      ],
-      username: 'openrelay',
-      credential: 'openrelay'
-    }
+    { urls: 'stun:stun.cloudflare.com:3478' }
   ];
 
   // Optional custom TURN relay configuration for strict enterprise or cellular networks
@@ -57,46 +45,42 @@ export function AudioCallProvider({ children }) {
   const [roomCallers, setRoomCallers] = useState([]);
   const [roomCallCount, setRoomCallCount] = useState(0);
   const [hasRemoteAudioPlaying, setHasRemoteAudioPlaying] = useState(false);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
   const localStreamRef = useRef(null);
   const peerConnectionsRef = useRef({}); // socketId -> RTCPeerConnection
   const remoteAudioElementsRef = useRef({}); // socketId -> HTMLAudioElement
   const iceCandidateQueuesRef = useRef({}); // socketId -> Array<RTCIceCandidateInit>
-  const audioOutputCtxRef = useRef(null); // Web Audio API AudioContext for direct sound playback
-  const audioSourceNodesRef = useRef({}); // socketId -> MediaStreamAudioSourceNode
-  const audioGainNodesRef = useRef({}); // socketId -> GainNode (PRESERVED TO PREVENT V8 GARBAGE COLLECTION!)
+  const isMakingOfferRef = useRef({}); // socketId -> boolean
+  const ignoreOfferRef = useRef({}); // socketId -> boolean
   const isMutedRef = useRef(false);
   const currentRoomIdRef = useRef(null);
   const analyserIntervalRef = useRef(null);
   const speakingCtxRef = useRef(null);
+  const syncIntervalRef = useRef(null);
 
   // Clear permission error
   const clearPermissionError = () => setPermissionError(null);
 
-  // Synchronously unlock Web Audio context during user click gestures
-  const ensureAudioOutputUnlocked = () => {
-    try {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!audioOutputCtxRef.current && AudioContextClass) {
-        audioOutputCtxRef.current = new AudioContextClass();
+  // Global user gesture unlocker for any deferred autoplay audio
+  const unlockAllAudioElements = () => {
+    Object.values(remoteAudioElementsRef.current).forEach((el) => {
+      if (el) {
+        el.muted = false;
+        el.volume = 1.0;
+        if (el.paused) {
+          el.play().then(() => {
+            setHasRemoteAudioPlaying(true);
+            setAutoplayBlocked(false);
+          }).catch(() => {});
+        }
       }
-      if (audioOutputCtxRef.current && audioOutputCtxRef.current.state === 'suspended') {
-        audioOutputCtxRef.current.resume().catch(() => {});
-      }
-    } catch (e) {
-      console.warn('[Web Audio Output Unlock Error]', e);
-    }
+    });
   };
 
-  // Global user gesture unlocker for any deferred autoplay audio
   useEffect(() => {
     const handleGestureUnlock = () => {
-      ensureAudioOutputUnlocked();
-      Object.values(remoteAudioElementsRef.current).forEach((el) => {
-        if (el && el.paused) {
-          el.play().catch(() => {});
-        }
-      });
+      unlockAllAudioElements();
     };
 
     window.addEventListener('click', handleGestureUnlock);
@@ -110,7 +94,7 @@ export function AudioCallProvider({ children }) {
     };
   }, []);
 
-  // Global room-level authoritative call updates (syncs count before and during calls)
+  // Room-level authoritative call updates from backend (exact participant count)
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
@@ -121,6 +105,26 @@ export function AudioCallProvider({ children }) {
       }
       if (Array.isArray(activeCallers)) {
         setRoomCallers(activeCallers);
+
+        // Keep remotePeers metadata synced with authoritative server list
+        setRemotePeers((prev) => {
+          const next = { ...prev };
+          activeCallers.forEach((caller) => {
+            if (caller.socketId && caller.socketId !== socket.id) {
+              if (!next[caller.socketId]) {
+                next[caller.socketId] = {
+                  displayName: caller.displayName || 'Participant',
+                  isMuted: Boolean(caller.isMuted),
+                  isSpeaking: false
+                };
+              } else {
+                next[caller.socketId].displayName = caller.displayName || next[caller.socketId].displayName;
+                next[caller.socketId].isMuted = Boolean(caller.isMuted);
+              }
+            }
+          });
+          return next;
+        });
       }
     };
 
@@ -130,27 +134,75 @@ export function AudioCallProvider({ children }) {
     };
   }, []);
 
-  // Helper to flush queued candidates after remote description is set
+  // Periodic heartbeat while in a call to guarantee 100% synchronization and self-healing
+  useEffect(() => {
+    if (inCall && currentRoomIdRef.current) {
+      const socket = getSocket();
+      if (socket) {
+        socket.emit('audio_sync_request', { roomId: currentRoomIdRef.current });
+      }
+
+      syncIntervalRef.current = setInterval(() => {
+        const s = getSocket();
+        if (s && currentRoomIdRef.current) {
+          s.emit('audio_sync_request', { roomId: currentRoomIdRef.current });
+        }
+      }, 5000);
+
+      return () => {
+        if (syncIntervalRef.current) {
+          clearInterval(syncIntervalRef.current);
+          syncIntervalRef.current = null;
+        }
+      };
+    }
+  }, [inCall]);
+
+  // Helper to flush queued ICE candidates after remote description is set
   const flushQueuedCandidates = async (socketId, pc) => {
     const queue = iceCandidateQueuesRef.current[socketId] || [];
+    iceCandidateQueuesRef.current[socketId] = [];
     if (queue.length > 0) {
       console.log(`[WebRTC Audio] Flushing ${queue.length} queued ICE candidates for ${socketId}`);
       for (const cand of queue) {
         try {
           await pc.addIceCandidate(new RTCIceCandidate(cand));
         } catch (e) {
-          // Ignore candidate errors silently (e.g. redundant candidate)
+          // Ignore duplicate / non-viable candidates silently
         }
       }
-      iceCandidateQueuesRef.current[socketId] = [];
     }
+  };
+
+  // Attach local audio track to all active peer connections
+  const syncLocalTracksToAllPeers = (stream) => {
+    if (!stream) return;
+    const audioTrack = stream.getAudioTracks()[0];
+    if (!audioTrack) return;
+
+    Object.entries(peerConnectionsRef.current).forEach(([socketId, pc]) => {
+      if (pc && pc.signalingState !== 'closed') {
+        const senders = pc.getSenders ? pc.getSenders() : [];
+        const existingSender = senders.find((s) => s.track && s.track.kind === 'audio');
+        if (existingSender) {
+          existingSender.replaceTrack(audioTrack).catch((e) => {
+            console.warn(`[WebRTC Audio] replaceTrack error with ${socketId}:`, e);
+          });
+        } else {
+          try {
+            pc.addTrack(audioTrack, stream);
+          } catch (e) {
+            console.warn(`[WebRTC Audio] addTrack error with ${socketId}:`, e);
+          }
+        }
+      }
+    });
   };
 
   // Initialize socket listeners for audio signaling
   const initAudioSocketListeners = (socket, roomId) => {
     currentRoomIdRef.current = roomId;
 
-    // Clean up existing listeners to avoid duplicated event handlers
     socket.off('existing_audio_participants');
     socket.off('peer_joined_audio');
     socket.off('peer_left_audio');
@@ -161,6 +213,7 @@ export function AudioCallProvider({ children }) {
     socket.off('peer_speaking_state');
 
     // Received list of peers already in audio upon joining
+    // The JOINING peer creates offers to all existing peers
     socket.on('existing_audio_participants', ({ peers }) => {
       console.log('[WebRTC Audio] Existing audio participants received:', peers);
       if (peers && peers.length > 0) {
@@ -176,30 +229,26 @@ export function AudioCallProvider({ children }) {
           return next;
         });
 
-        // Mesh Fallback: If an existing peer has not initiated an offer to us after 2.5s,
-        // we proactively initiate an offer so bidirectional audio is guaranteed!
+        // The newly joined peer is the initiator for existing participants
         peers.forEach((p) => {
-          setTimeout(() => {
-            if (!peerConnectionsRef.current[p.socketId]) {
-              console.log('[WebRTC Audio] Mesh fallback: Initiating offer to existing peer:', p.displayName, p.socketId);
-              createPeerConnection(socket, p.socketId, true, roomId).catch((e) => {
-                console.warn('[WebRTC Audio] Mesh fallback connection error:', e);
-              });
-            }
-          }, 2500);
+          createPeerConnection(socket, p.socketId, true, roomId).catch((e) => {
+            console.warn('[WebRTC Audio] Initiator connection error:', e);
+          });
         });
       }
     });
 
+    // An existing peer receives notification that a new peer joined
+    // The existing peer creates the connection in RECEIVER mode (waits for offer)
     socket.on('peer_joined_audio', async ({ socketId, displayName }) => {
-      console.log('[WebRTC Audio] Peer joined call, initiating offer:', displayName, socketId);
+      console.log('[WebRTC Audio] Peer joined call (waiting for offer):', displayName, socketId);
       setRemotePeers((prev) => ({
         ...prev,
         [socketId]: { displayName, isMuted: false, isSpeaking: false }
       }));
 
-      // Initiate connection as caller
-      await createPeerConnection(socket, socketId, true, roomId);
+      // Existing peer prepares the peer connection and waits for the joiner's offer
+      await createPeerConnection(socket, socketId, false, roomId);
     });
 
     socket.on('peer_left_audio', ({ socketId }) => {
@@ -207,45 +256,85 @@ export function AudioCallProvider({ children }) {
       closePeer(socketId);
     });
 
+    // Handle incoming offer with W3C Perfect Negotiation Glare Protection
     socket.on('audio_offer', async ({ fromSocketId, offer, displayName }) => {
       console.log('[WebRTC Audio] Received offer from:', displayName, fromSocketId);
       setRemotePeers((prev) => ({
         ...prev,
-        [fromSocketId]: { displayName: displayName || 'Participant', isMuted: false, isSpeaking: false }
+        [fromSocketId]: {
+          displayName: displayName || prev[fromSocketId]?.displayName || 'Participant',
+          isMuted: prev[fromSocketId]?.isMuted || false,
+          isSpeaking: false
+        }
       }));
 
-      const pc = await createPeerConnection(socket, fromSocketId, false, roomId);
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      await flushQueuedCandidates(fromSocketId, pc);
+      let pc = peerConnectionsRef.current[fromSocketId];
+      if (!pc || pc.signalingState === 'closed') {
+        pc = await createPeerConnection(socket, fromSocketId, false, roomId);
+      }
 
-      const answer = await pc.createAnswer({
-        offerToReceiveAudio: true
-      });
-      await pc.setLocalDescription(answer);
+      // W3C Perfect Negotiation Glare Resolution:
+      // The polite peer yields if there is an offer collision
+      const isPolite = String(socket.id) > String(fromSocketId);
+      const isOfferCollision =
+        offer.type === 'offer' &&
+        (pc.signalingState !== 'stable' || isMakingOfferRef.current[fromSocketId]);
 
-      socket.emit('audio_answer', { targetSocketId: fromSocketId, answer });
+      ignoreOfferRef.current[fromSocketId] = !isPolite && isOfferCollision;
+      if (ignoreOfferRef.current[fromSocketId]) {
+        console.log('[WebRTC Audio] Glare: Impolite peer ignoring duplicate offer from:', fromSocketId);
+        return;
+      }
+
+      if (isOfferCollision) {
+        console.log('[WebRTC Audio] Glare: Polite peer rolling back offer for:', fromSocketId);
+        try {
+          await pc.setLocalDescription({ type: 'rollback' });
+        } catch (e) {
+          console.warn('[WebRTC Audio] Rollback warning:', e);
+        }
+      }
+
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        await flushQueuedCandidates(fromSocketId, pc);
+
+        const answer = await pc.createAnswer({
+          offerToReceiveAudio: true
+        });
+        await pc.setLocalDescription(answer);
+
+        socket.emit('audio_answer', { targetSocketId: fromSocketId, answer });
+      } catch (err) {
+        console.error('[WebRTC Audio] Failed to handle audio offer:', err);
+      }
     });
 
     socket.on('audio_answer', async ({ fromSocketId, answer }) => {
       console.log('[WebRTC Audio] Received answer from:', fromSocketId);
       const pc = peerConnectionsRef.current[fromSocketId];
-      if (pc) {
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
-        await flushQueuedCandidates(fromSocketId, pc);
+      if (pc && pc.signalingState !== 'closed') {
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+          await flushQueuedCandidates(fromSocketId, pc);
+        } catch (err) {
+          console.error('[WebRTC Audio] Failed to set remote answer:', err);
+        }
       }
     });
 
     socket.on('audio_ice_candidate', async ({ fromSocketId, candidate }) => {
       if (!candidate || !candidate.candidate) return;
       const pc = peerConnectionsRef.current[fromSocketId];
-      if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+
+      if (pc && pc.remoteDescription && pc.remoteDescription.type && pc.signalingState !== 'closed') {
         try {
           await pc.addIceCandidate(new RTCIceCandidate(candidate));
         } catch (e) {
-          // Ignore duplicate / non-viable candidates silently
+          // Ignore redundant / stale candidates
         }
       } else {
-        // Queue candidate until remote description is set
+        // Queue candidate until remote description is ready
         if (!iceCandidateQueuesRef.current[fromSocketId]) {
           iceCandidateQueuesRef.current[fromSocketId] = [];
         }
@@ -275,24 +364,41 @@ export function AudioCallProvider({ children }) {
   };
 
   const createPeerConnection = async (socket, remoteSocketId, isInitiator, roomId) => {
-    // If an existing PC exists, close it cleanly
-    if (peerConnectionsRef.current[remoteSocketId]) {
-      try {
-        peerConnectionsRef.current[remoteSocketId].close();
-      } catch (e) {}
-      delete peerConnectionsRef.current[remoteSocketId];
+    // If an existing PC is in stable state with active tracks, reuse it
+    let pc = peerConnectionsRef.current[remoteSocketId];
+    if (pc && pc.signalingState !== 'closed') {
+      if (isInitiator) {
+        try {
+          isMakingOfferRef.current[remoteSocketId] = true;
+          const offer = await pc.createOffer({ offerToReceiveAudio: true });
+          await pc.setLocalDescription(offer);
+          socket.emit('audio_offer', { targetSocketId: remoteSocketId, offer });
+        } catch (err) {
+          console.warn('[WebRTC Audio] Renegotiation offer error:', err);
+        } finally {
+          isMakingOfferRef.current[remoteSocketId] = false;
+        }
+      }
+      return pc;
     }
 
-    const pc = new RTCPeerConnection(RTC_CONFIG);
-    peerConnectionsRef.current[remoteSocketId] = pc;
+    // Close any dead connection before creating new
+    if (pc) {
+      try { pc.close(); } catch (e) {}
+    }
 
-    // Add local audio tracks if we have microphone access
+    pc = new RTCPeerConnection(RTC_CONFIG);
+    peerConnectionsRef.current[remoteSocketId] = pc;
+    isMakingOfferRef.current[remoteSocketId] = false;
+    ignoreOfferRef.current[remoteSocketId] = false;
+
+    // Add local microphone tracks
     if (localStreamRef.current) {
       localStreamRef.current.getAudioTracks().forEach((track) => {
         pc.addTrack(track, localStreamRef.current);
       });
     } else {
-      // In listen-only mode, add receive-only transceiver
+      // In listen-only mode, register receive-only transceiver
       try {
         pc.addTransceiver('audio', { direction: 'recvonly' });
       } catch (e) {}
@@ -328,12 +434,10 @@ export function AudioCallProvider({ children }) {
       }
     };
 
-    let disconnectTimer = null;
-
     pc.onconnectionstatechange = () => {
-      console.log(`[WebRTC Audio] Peer connection state with ${remoteSocketId}:`, pc.connectionState);
+      console.log(`[WebRTC Audio] Peer state with ${remoteSocketId}:`, pc.connectionState);
       if (pc.connectionState === 'failed') {
-        console.warn(`[WebRTC Audio] Peer connection failed with ${remoteSocketId}, restarting ICE...`);
+        console.warn(`[WebRTC Audio] Connection failed with ${remoteSocketId}, triggering ICE restart...`);
         if (isInitiator) {
           pc.restartIce?.();
           pc.createOffer({ iceRestart: true, offerToReceiveAudio: true })
@@ -346,75 +450,25 @@ export function AudioCallProvider({ children }) {
 
     pc.oniceconnectionstatechange = () => {
       console.log(`[WebRTC Audio] ICE state with ${remoteSocketId}:`, pc.iceConnectionState);
-      if (pc.iceConnectionState === 'disconnected') {
-        if (disconnectTimer) clearTimeout(disconnectTimer);
-        disconnectTimer = setTimeout(() => {
-          if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
-            console.warn(`[WebRTC Audio] ICE disconnected for 4s with ${remoteSocketId}, restarting ICE...`);
-            if (isInitiator) {
-              pc.restartIce?.();
-              pc.createOffer({ iceRestart: true, offerToReceiveAudio: true })
-                .then((offer) => pc.setLocalDescription(offer))
-                .then(() => socket.emit('audio_offer', { targetSocketId: remoteSocketId, offer: pc.localDescription }))
-                .catch((e) => console.warn('[WebRTC Audio] ICE restart error:', e));
-            }
-          }
-        }, 4000);
-      } else if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-        if (disconnectTimer) {
-          clearTimeout(disconnectTimer);
-          disconnectTimer = null;
-        }
+      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+        setHasRemoteAudioPlaying(true);
       } else if (pc.iceConnectionState === 'failed') {
-        console.warn(`[WebRTC Audio] ICE failed with ${remoteSocketId}, restarting ICE...`);
         if (isInitiator) {
           pc.restartIce?.();
           pc.createOffer({ iceRestart: true, offerToReceiveAudio: true })
             .then((offer) => pc.setLocalDescription(offer))
             .then(() => socket.emit('audio_offer', { targetSocketId: remoteSocketId, offer: pc.localDescription }))
-            .catch((e) => console.warn('[WebRTC Audio] ICE restart error:', e));
+            .catch(() => {});
         }
       }
     };
 
-    // When remote stream arrives, route through Web Audio destination & HTML audio element
+    // When remote stream arrives, route through hardware-accelerated HTMLAudioElement
     pc.ontrack = (event) => {
-      console.log('[WebRTC Audio] Received remote audio stream from:', remoteSocketId);
+      console.log('[WebRTC Audio] Received remote audio track from:', remoteSocketId);
       const stream = event.streams && event.streams[0] ? event.streams[0] : new MediaStream([event.track]);
       event.track.enabled = true;
-      setHasRemoteAudioPlaying(true);
 
-      // 1. PRIMARY: Web Audio API output pipeline with persistent gain node retention
-      try {
-        ensureAudioOutputUnlocked();
-        const audioCtx = audioOutputCtxRef.current;
-        if (audioCtx) {
-          if (audioCtx.state === 'suspended') {
-            audioCtx.resume().catch(() => {});
-          }
-          if (audioSourceNodesRef.current[remoteSocketId]) {
-            try { audioSourceNodesRef.current[remoteSocketId].disconnect(); } catch (e) {}
-          }
-          if (audioGainNodesRef.current[remoteSocketId]) {
-            try { audioGainNodesRef.current[remoteSocketId].disconnect(); } catch (e) {}
-          }
-
-          const source = audioCtx.createMediaStreamSource(stream);
-          const gainNode = audioCtx.createGain();
-          gainNode.gain.value = 1.0;
-          source.connect(gainNode);
-          gainNode.connect(audioCtx.destination);
-
-          // RETAIN IN REF: Prevents browser V8 garbage collection from severing audio after ~15-30s!
-          audioSourceNodesRef.current[remoteSocketId] = source;
-          audioGainNodesRef.current[remoteSocketId] = gainNode;
-          console.log('[WebRTC Audio] Stream attached to Web Audio destination & protected from GC for', remoteSocketId);
-        }
-      } catch (err) {
-        console.warn('[WebRTC Audio] Web Audio output attachment error:', err);
-      }
-
-      // 2. SECONDARY: Managed <audio> element kept in DOM with track unmuting listener
       let audioEl = remoteAudioElementsRef.current[remoteSocketId];
       if (!audioEl) {
         audioEl = document.createElement('audio');
@@ -423,39 +477,61 @@ export function AudioCallProvider({ children }) {
         audioEl.playsInline = true;
         audioEl.muted = false;
         audioEl.volume = 1.0;
+        // Non-throttled accessible positioning
         audioEl.style.position = 'fixed';
-        audioEl.style.top = '-9999px';
-        audioEl.style.left = '-9999px';
+        audioEl.style.bottom = '0px';
+        audioEl.style.right = '0px';
         audioEl.style.width = '1px';
         audioEl.style.height = '1px';
-        audioEl.style.opacity = '0.01';
+        audioEl.style.opacity = '0.001';
         audioEl.style.pointerEvents = 'none';
+        audioEl.style.zIndex = '-1';
         document.body.appendChild(audioEl);
         remoteAudioElementsRef.current[remoteSocketId] = audioEl;
       }
+
       audioEl.srcObject = stream;
       audioEl.muted = false;
+      audioEl.volume = 1.0;
 
-      // When first RTP packets arrive across different networks / km away, guarantee playback
+      // Play immediately
+      audioEl.play().then(() => {
+        setHasRemoteAudioPlaying(true);
+        setAutoplayBlocked(false);
+      }).catch((err) => {
+        console.warn('[WebRTC Audio] Autoplay deferred pending user interaction:', err);
+        setAutoplayBlocked(true);
+      });
+
+      // Play on first incoming RTP network packet
       event.track.onunmute = () => {
         console.log('[WebRTC Audio] Track unmuted (incoming network packets verified) for', remoteSocketId);
-        if (audioEl) audioEl.play().catch(() => {});
-        if (audioOutputCtxRef.current && audioOutputCtxRef.current.state === 'suspended') {
-          audioOutputCtxRef.current.resume().catch(() => {});
+        if (audioEl) {
+          audioEl.muted = false;
+          audioEl.volume = 1.0;
+          audioEl.play().then(() => {
+            setHasRemoteAudioPlaying(true);
+            setAutoplayBlocked(false);
+          }).catch(() => {
+            setAutoplayBlocked(true);
+          });
         }
       };
-
-      audioEl.play().catch((err) => {
-        console.warn('[WebRTC Audio] Autoplay deferred pending user gesture:', err);
-      });
     };
 
     if (isInitiator) {
-      const offer = await pc.createOffer({
-        offerToReceiveAudio: true
-      });
-      await pc.setLocalDescription(offer);
-      socket.emit('audio_offer', { targetSocketId: remoteSocketId, offer });
+      try {
+        isMakingOfferRef.current[remoteSocketId] = true;
+        const offer = await pc.createOffer({
+          offerToReceiveAudio: true
+        });
+        await pc.setLocalDescription(offer);
+        socket.emit('audio_offer', { targetSocketId: remoteSocketId, offer });
+      } catch (err) {
+        console.warn('[WebRTC Audio] Failed to create initial offer:', err);
+      } finally {
+        isMakingOfferRef.current[remoteSocketId] = false;
+      }
     }
 
     return pc;
@@ -468,18 +544,6 @@ export function AudioCallProvider({ children }) {
       } catch (e) {}
       delete peerConnectionsRef.current[socketId];
     }
-    if (audioSourceNodesRef.current[socketId]) {
-      try {
-        audioSourceNodesRef.current[socketId].disconnect();
-      } catch (e) {}
-      delete audioSourceNodesRef.current[socketId];
-    }
-    if (audioGainNodesRef.current[socketId]) {
-      try {
-        audioGainNodesRef.current[socketId].disconnect();
-      } catch (e) {}
-      delete audioGainNodesRef.current[socketId];
-    }
     if (remoteAudioElementsRef.current[socketId]) {
       try {
         remoteAudioElementsRef.current[socketId].srcObject = null;
@@ -490,6 +554,9 @@ export function AudioCallProvider({ children }) {
     if (iceCandidateQueuesRef.current[socketId]) {
       delete iceCandidateQueuesRef.current[socketId];
     }
+    delete isMakingOfferRef.current[socketId];
+    delete ignoreOfferRef.current[socketId];
+
     setRemotePeers((prev) => {
       const next = { ...prev };
       delete next[socketId];
@@ -497,10 +564,9 @@ export function AudioCallProvider({ children }) {
     });
   };
 
-  // Join audio call in Listen-Only mode (works even when mic is blocked by HTTP on phone)
+  // Join audio call in Listen-Only mode (works even when mic is blocked by HTTP on mobile)
   const joinAsListener = (roomId) => {
-    // Immediately unlock audio output synchronously during user click
-    ensureAudioOutputUnlocked();
+    unlockAllAudioElements();
     setPermissionError(null);
     setIsListenerOnly(true);
     setInCall(true);
@@ -515,11 +581,9 @@ export function AudioCallProvider({ children }) {
 
   // Start Audio Call with Microphone
   const startAudioCall = async (roomId) => {
-    // 1. Immediately unlock audio output synchronously during user click
-    ensureAudioOutputUnlocked();
+    unlockAllAudioElements();
     setPermissionError(null);
 
-    // Check if mediaDevices API is supported in current context
     const hasMediaDevices = !!(navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function');
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const isHttpInsecure = window.location.protocol === 'http:' && !isLocalhost;
@@ -530,7 +594,7 @@ export function AudioCallProvider({ children }) {
         type: isHttpInsecure ? 'INSECURE_HTTP_MOBILE' : 'UNSUPPORTED_BROWSER',
         title: isHttpInsecure ? 'Microphone Blocked (HTTP on Mobile)' : 'Microphone Not Supported',
         message: isHttpInsecure
-          ? 'Mobile browsers (Chrome / Safari) require a secure connection (HTTPS) or localhost to access the microphone over Wi-Fi. You can join in Listener Mode right now to hear everyone.'
+          ? 'Mobile browsers require a secure connection (HTTPS) or localhost to access the microphone. You can join in Listener Mode right now to hear everyone.'
           : 'Your current browser environment does not support audio recording.',
         isHttpInsecure,
         canListenOnly: true,
@@ -544,11 +608,7 @@ export function AudioCallProvider({ children }) {
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true,
-          googEchoCancellation: true,
-          googAutoGainControl: true,
-          googNoiseSuppression: true,
-          googHighpassFilter: true
+          autoGainControl: true
         },
         video: false
       });
@@ -558,6 +618,9 @@ export function AudioCallProvider({ children }) {
       setInCall(true);
       setIsMuted(false);
       isMutedRef.current = false;
+
+      // Sync local stream tracks to any already-created peer connections
+      syncLocalTracksToAllPeers(stream);
 
       const socket = getSocket();
       initAudioSocketListeners(socket, roomId);
@@ -635,6 +698,11 @@ export function AudioCallProvider({ children }) {
 
   // Leave Audio Call
   const leaveAudioCall = (roomId) => {
+    if (syncIntervalRef.current) {
+      clearInterval(syncIntervalRef.current);
+      syncIntervalRef.current = null;
+    }
+
     if (analyserIntervalRef.current) {
       clearInterval(analyserIntervalRef.current);
       analyserIntervalRef.current = null;
@@ -650,7 +718,7 @@ export function AudioCallProvider({ children }) {
       localStreamRef.current = null;
     }
 
-    // Close all peer connections and audio sinks
+    // Close all peer connections and audio elements
     Object.keys(peerConnectionsRef.current).forEach((socketId) => {
       closePeer(socketId);
     });
@@ -667,12 +735,12 @@ export function AudioCallProvider({ children }) {
     setIsListenerOnly(false);
     setRemotePeers({});
     setHasRemoteAudioPlaying(false);
+    setAutoplayBlocked(false);
   };
 
   // Toggle Mute
   const toggleMute = (roomId) => {
     if (isListenerOnly) {
-      // In listener mode, try upgrading to microphone
       startAudioCall(roomId || currentRoomIdRef.current);
       return;
     }
@@ -699,6 +767,11 @@ export function AudioCallProvider({ children }) {
     };
   }, []);
 
+  // Compute uniform, authoritative participant count
+  const effectivePeerCount = inCall
+    ? Math.max(roomCallCount, Object.keys(remotePeers).length + 1)
+    : roomCallCount;
+
   return (
     <AudioCallContext.Provider
       value={{
@@ -710,8 +783,10 @@ export function AudioCallProvider({ children }) {
         remotePeers,
         roomCallers,
         activeRoomCallCount: roomCallCount,
-        peerCount: inCall ? (Object.keys(remotePeers).length + 1) : roomCallCount,
+        peerCount: effectivePeerCount,
         hasRemoteAudioPlaying,
+        autoplayBlocked,
+        unlockAllAudioElements,
         startAudioCall,
         joinAsListener,
         leaveAudioCall,

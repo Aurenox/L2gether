@@ -53,7 +53,9 @@ export default function RoomHeader({
     toggleMute,
     peerCount,
     activeRoomCallCount,
-    hasRemoteAudioPlaying
+    hasRemoteAudioPlaying,
+    autoplayBlocked,
+    unlockAllAudioElements
   } = useAudioCall();
 
   const navigate = useNavigate();
@@ -235,6 +237,18 @@ export default function RoomHeader({
                 <span style={{ fontSize: '0.72rem' }}>{peerCount}</span>
                 {hasRemoteAudioPlaying && <Volume2 size={11} color="#34d399" title="Sound is active" />}
               </div>
+
+              {autoplayBlocked && (
+                <button
+                  className="btn btn-warning btn-sm"
+                  onClick={unlockAllAudioElements}
+                  title="Your browser blocked audio playback. Click to hear other participants."
+                  style={{ fontSize: '0.7rem', padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                >
+                  <Volume2 size={12} />
+                  <span>Click to Hear Audio</span>
+                </button>
+              )}
 
               <button
                 className={`btn-icon sm ${isMuted ? 'btn-danger' : 'btn-secondary'}`}

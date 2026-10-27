@@ -17,6 +17,8 @@ export default function MobileAudioCallBar({ roomId }) {
     isListenerOnly,
     peerCount,
     hasRemoteAudioPlaying,
+    autoplayBlocked,
+    unlockAllAudioElements,
     toggleMute,
     leaveAudioCall,
     startAudioCall
@@ -56,6 +58,17 @@ export default function MobileAudioCallBar({ roomId }) {
 
       {/* Center / Action Buttons */}
       <div className="audio-bar-actions">
+        {autoplayBlocked && (
+          <button
+            className="btn btn-warning btn-sm"
+            onClick={unlockAllAudioElements}
+            title="Click to hear audio"
+            style={{ fontSize: '0.72rem', padding: '3px 6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+          >
+            <Volume2 size={12} />
+            <span>Hear Audio</span>
+          </button>
+        )}
         {isListenerOnly ? (
           <button
             className="btn btn-secondary btn-sm"
