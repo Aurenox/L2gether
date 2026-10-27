@@ -334,7 +334,7 @@ To connect to an external PostgreSQL database (e.g. Neon, Supabase, Render Postg
    cd backend
    npm run migrate
    ```
-   The relational schema with automated indexing and cascade foreign keys is in [`backend/src/database/schema.sql`](file:///c:/Users/Saurav/OneDrive/Desktop/L2gether/backend/src/database/schema.sql).
+   The relational schema with automated indexing and cascade foreign keys is in [`backend/src/database/schema.sql`](backend/src/database/schema.sql).
 
 ---
 
@@ -445,7 +445,7 @@ Designed and engineered with passion by **Saurav B**.
 - **LinkedIn:** [Saurav B](https://www.linkedin.com/in/saurav-b-a864a7326/)
 - **Email:** [saurav04atg@gmail.com](mailto:saurav04atg@gmail.com)
 
-Distributed under the **MIT License**. See [`LICENSE`](file:///c:/Users/Saurav/OneDrive/Desktop/L2gether/LICENSE) for more information.
+Distributed under the **MIT License**. See [LICENSE](LICENSE) for more information.
 
 <div align="center">
   <sub>Built for developers, by developers. Star ⭐ this repository if you find it helpful!</sub>
